@@ -1253,16 +1253,16 @@
 
       // Blank line
       if (line.trim() === '') {
-        closeAllLists();
+        closeTopList();
         return;
       }
 
-      // Regular paragraph
-      closeAllLists();
+      // Paragraph
+      closeTopList();
       html += `<p>${inlineFormat(line)}</p>`;
     });
 
-    closeAllLists();
+    closeTopList();
     return html;
   }
 
