@@ -164,8 +164,8 @@ def _bullet_list(texts: list) -> str:
             line = line.strip().strip("-•").strip()
             if line and line.lower() not in seen:
                 seen.add(line.lower())
-                out.append(f"  - {line}")
-    return "\n".join(out) if out else "  - None noted."
+                out.append(f"    - {line}")
+    return "\n".join(out) if out else "    - None noted."
 
 def _sentiment_label(yes_pct, cond_pct, no_pct):
     if yes_pct >= 60:
