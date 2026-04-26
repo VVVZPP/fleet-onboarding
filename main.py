@@ -125,63 +125,217 @@ def verify_admin(x_admin_pin: Optional[str] = Header(default=None)):
         raise HTTPException(status_code=403, detail="Invalid PIN.")
     return {"ok": True}
 
-# ── AI Synthesis ──────────────────────────────────────────────
+# ── Rule-based Synthesis ─────────────────────────────────────
+
+OPTION_NAMES = {
+    "o1": "Option 1: Actual User Details",
+    "o2": "Option 2: Dummy Accounts",
+    "o3": "Option 3: Fleet Cards (Deprioritised)",
+}
+
+REC_LABELS = {"yes": "Yes", "cond": "Conditional", "no": "No"}
+
+OVERALL_VERDICT = {
+    "yes":  "Recommended",
+    "cond": "Conditionally Recommended",
+    "no":   "Not Recommended",
+    None:   "No consensus",
+}
+
+def _majority(votes: list):
+    """Return the most common vote value, or None if tied/empty."""
+    if not votes:
+        return None
+    counts = {v: votes.count(v) for v in set(votes)}
+    top = max(counts, key=lambda k: counts[k])
+    # If there's a tie, prefer yes > cond > no
+    max_count = counts[top]
+    tied = [k for k, v in counts.items() if v == max_count]
+    for pref in ["yes", "cond", "no"]:
+        if pref in tied:
+            return pref
+    return top
+
+def _bullet_list(texts: list) -> str:
+    """Deduplicate and format a list of text entries as markdown bullets."""
+    seen, out = set(), []
+    for t in texts:
+        for line in t.splitlines():
+            line = line.strip().strip("-•").strip()
+            if line and line.lower() not in seen:
+                seen.add(line.lower())
+                out.append(f"  - {line}")
+    return "\n".join(out) if out else "  - None noted."
+
+def _sentiment_label(yes_pct, cond_pct, no_pct):
+    if yes_pct >= 60:
+        return "Broadly positive — majority recommend."
+    if no_pct >= 60:
+        return "Broadly negative — majority do not recommend."
+    if cond_pct >= 40:
+        return "Mixed — significant conditional support with reservations."
+    if yes_pct >= 40:
+        return "Leaning positive with some conditions."
+    return "Divided — no clear consensus."
 
 @app.get("/api/synthesise")
-async def synthesise():
-    """Generate an AI synthesis using OpenAI (non-streaming)."""
+def synthesise():
+    """Generate a structured rule-based synthesis from all submissions."""
     data = load_data()
     if not data:
         raise HTTPException(status_code=400, detail="No submissions yet.")
 
-    lines = []
+    n = len(data)
+    depts = sorted(set(s.get("dept", "") for s in data if s.get("dept", "")))
+    dept_list = ", ".join(depts) if depts else "Various"
+
+    # ── Per-option aggregation ────────────────────────────────
+    option_stats = {}
+    for opt in ["o1", "o2", "o3"]:
+        votes, pros, cons, mits = [], [], [], []
+        for s in data:
+            o = s.get(opt, {})
+            if o.get("rec"):
+                votes.append(o["rec"])
+            if o.get("pros", "").strip():
+                pros.append(o["pros"].strip())
+            if o.get("cons", "").strip():
+                cons.append(o["cons"].strip())
+            if o.get("mitigations", "").strip():
+                mits.append(o["mitigations"].strip())
+        yes_c  = votes.count("yes")
+        cond_c = votes.count("cond")
+        no_c   = votes.count("no")
+        total_v = len(votes) or 1
+        option_stats[opt] = {
+            "votes": votes,
+            "yes": yes_c, "cond": cond_c, "no": no_c,
+            "yes_pct":  round(yes_c  / total_v * 100),
+            "cond_pct": round(cond_c / total_v * 100),
+            "no_pct":   round(no_c   / total_v * 100),
+            "majority": _majority(votes),
+            "pros": pros, "cons": cons, "mits": mits,
+        }
+
+    # ── Per-department aggregation ────────────────────────────
+    dept_stats = {}
     for s in data:
+        dept = s.get("dept", "Unknown")
+        if dept not in dept_stats:
+            dept_stats[dept] = {"count": 0, "o1": [], "o2": [], "o3": [], "extras": []}
+        dept_stats[dept]["count"] += 1
+        for opt in ["o1", "o2", "o3"]:
+            rec = s.get(opt, {}).get("rec")
+            if rec:
+                dept_stats[dept][opt].append(rec)
+        if s.get("extra", "").strip():
+            dept_stats[dept]["extras"].append(s["extra"].strip())
+
+    # ── Build markdown synthesis ──────────────────────────────
+    lines = []
+    lines.append("## Fleet Onboarding Options Review — Synthesis Report")
+    lines.append(f"*Based on {n} submission{'s' if n != 1 else ''} from: {dept_list}*")
+    lines.append("")
+    lines.append("---")
+
+    # Section 1: Overall Recommendation
+    lines.append("### 1. Overall Recommendation")
+    for opt in ["o1", "o2", "o3"]:
+        st = option_stats[opt]
+        verdict = OVERALL_VERDICT.get(st["majority"], "No consensus")
         lines.append(
-            f"- {s['name']} ({s.get('dept','—')}): "
-            f"O1={s['o1']['rec'] or '?'} pros=\"{s['o1']['pros'][:80]}\" cons=\"{s['o1']['cons'][:80]}\" mit=\"{s['o1']['mitigations'][:80]}\"; "
-            f"O2={s['o2']['rec'] or '?'} pros=\"{s['o2']['pros'][:80]}\" cons=\"{s['o2']['cons'][:80]}\" mit=\"{s['o2']['mitigations'][:80]}\"; "
-            f"O3={s['o3']['rec'] or '?'} pros=\"{s['o3']['pros'][:80]}\" cons=\"{s['o3']['cons'][:80]}\" mit=\"{s['o3']['mitigations'][:80]}\"; "
-            f"extra=\"{s.get('extra','')[:100]}\""
+            f"- **{OPTION_NAMES[opt]}** — {verdict} "
+            f"(Yes: {st['yes']}, Conditional: {st['cond']}, No: {st['no']})"
         )
-    summary_text = "\n".join(lines)
+    lines.append("")
+    lines.append("---")
 
-    depts = list(set(s.get("dept","") for s in data if s.get("dept","")))
-    dept_list = ", ".join(depts) if depts else "various"
+    # Section 2: Per-Option Analysis
+    lines.append("### 2. Per-Option Analysis")
+    for opt in ["o1", "o2", "o3"]:
+        st = option_stats[opt]
+        sentiment = _sentiment_label(st["yes_pct"], st["cond_pct"], st["no_pct"])
+        lines.append(f"")
+        lines.append(f"- **{OPTION_NAMES[opt]}**")
+        lines.append(f"  - *Sentiment:* {sentiment}")
+        lines.append(f"  - *Vote breakdown:* Yes {st['yes_pct']}% · Conditional {st['cond_pct']}% · No {st['no_pct']}%")
+        lines.append(f"  - **Key Pros:**")
+        lines.append(_bullet_list(st["pros"]))
+        lines.append(f"  - **Key Cons:**")
+        lines.append(_bullet_list(st["cons"]))
+        lines.append(f"  - **Mitigations Suggested:**")
+        lines.append(_bullet_list(st["mits"]))
+    lines.append("")
+    lines.append("---")
 
-    prompt = f"""You are an analyst synthesising workshop feedback for CDG ENGIE's fleet onboarding options review.
+    # Section 3: Per-Department Perspectives
+    lines.append("### 3. Per-Department Perspectives")
+    for dept, ds in sorted(dept_stats.items()):
+        lines.append(f"")
+        lines.append(f"- **{dept}** ({ds['count']} response{'s' if ds['count'] != 1 else ''})")
+        for opt, label in [("o1", "Option 1"), ("o2", "Option 2"), ("o3", "Option 3")]:
+            votes = ds[opt]
+            if votes:
+                tally = ", ".join(f"{REC_LABELS.get(v, v)} ×{votes.count(v)}" for v in sorted(set(votes), key=lambda x: ["yes","cond","no"].index(x) if x in ["yes","cond","no"] else 9))
+                lines.append(f"  - {label}: {tally}")
+            else:
+                lines.append(f"  - {label}: No vote recorded")
+        if ds["extras"]:
+            lines.append(f"  - *Additional notes:*")
+            for note in ds["extras"]:
+                lines.append(f"    - {note}")
+    lines.append("")
+    lines.append("---")
 
-There are {len(data)} submissions from departments: {dept_list}.
+    # Section 4: Key Risks & Open Questions
+    lines.append("### 4. Key Risks & Open Questions")
+    all_extras = [s.get("extra", "").strip() for s in data if s.get("extra", "").strip()]
+    o3_cons = option_stats["o3"]["cons"]
+    o2_cons = option_stats["o2"]["cons"]
+    risks = []
+    if option_stats["o3"]["no"] > 0:
+        risks.append("Option 3 (Fleet Cards) faces charger incompatibility issues — past manual resolutions were required.")
+    if option_stats["o2"]["cond"] + option_stats["o2"]["no"] > option_stats["o2"]["yes"]:
+        risks.append("Option 2 (Dummy Accounts) raises concerns around manual credential management and lack of direct driver engagement.")
+    if option_stats["o1"]["cond"] > 0:
+        risks.append("Option 1 (Actual User Details) has conditional supporters — slower registration and duplicate account risk need to be addressed.")
+    if all_extras:
+        risks.append("Additional open questions raised by respondents:")
+        for note in all_extras:
+            risks.append(f"  - {note}")
+    if not risks:
+        risks.append("No specific risks or open questions were flagged beyond standard operational considerations.")
+    for r in risks:
+        lines.append(f"- {r}")
+    lines.append("")
+    lines.append("---")
 
-The three options are:
-- Option 1: Actual user details (Preferred) — drivers register with real name, phone, email.
-- Option 2: Dummy accounts — mass accounts created upfront without individual driver details.
-- Option 3: Fleet cards (Deprioritised) — physical cards issued per driver.
+    # Section 5: Suggested Next Steps
+    lines.append("### 5. Suggested Next Steps")
+    majority_o1 = option_stats["o1"]["majority"]
+    majority_o2 = option_stats["o2"]["majority"]
+    majority_o3 = option_stats["o3"]["majority"]
 
-Raw submissions:
-{summary_text}
+    if majority_o1 == "yes":
+        lines.append("- **Proceed with Option 1** as the primary onboarding method — address duplicate account risk with a deduplication check at registration.")
+    elif majority_o1 == "cond":
+        lines.append("- **Explore Option 1** further — resolve conditional concerns (e.g. registration speed, duplicate accounts) before full rollout.")
+    else:
+        lines.append("- **Reconsider Option 1** — address the concerns raised before recommending it as the primary path.")
 
-Write a structured synthesis with the following sections:
-1. **Overall Recommendation** — which option(s) are favoured and why.
-2. **Per-Option Analysis** — for each option: aggregate sentiment, key pros, key cons, key mitigations suggested.
-3. **Per-Department Perspectives** — for each department that submitted, summarise their stance and any unique concerns.
-4. **Key Risks & Open Questions** — cross-cutting risks and unresolved questions raised.
-5. **Suggested Next Steps** — concrete actions to move forward.
+    if majority_o2 in ["yes", "cond"]:
+        lines.append("- **Keep Option 2 as a fallback** for partners who cannot collect individual driver data upfront — document the escalation process clearly.")
+    else:
+        lines.append("- **Deprioritise Option 2** unless a specific partner use case requires it — ensure manual intervention processes are documented if used.")
 
-Be concise, professional, and actionable. Use bullet points within sections."""
+    lines.append("- **Formally deprioritise Option 3** — resolve charger compatibility issues before reintroducing fleet cards as an option.")
+    lines.append("- **Share this synthesis** with all participating departments for sign-off and alignment.")
+    lines.append("- **Schedule a follow-up** to address open questions and finalise the recommended onboarding SOP.")
+    lines.append("")
+    lines.append("---")
+    lines.append(f"*Synthesis generated automatically from {n} workshop submission{'s' if n != 1 else ''}.*")
 
-    from openai import AsyncOpenAI
-    client = AsyncOpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else AsyncOpenAI()
-
-    try:
-        response = await client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1400,
-        )
-        text = response.choices[0].message.content
-        return {"synthesis": text}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"synthesis": "\n".join(lines)}
 
 # ── Static files ──────────────────────────────────────────────
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
