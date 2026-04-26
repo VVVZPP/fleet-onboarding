@@ -277,11 +277,11 @@ def synthesise():
             votes = ds[opt]
             if votes:
                 tally = ", ".join(f"{REC_LABELS.get(v, v)} ×{votes.count(v)}" for v in sorted(set(votes), key=lambda x: ["yes","cond","no"].index(x) if x in ["yes","cond","no"] else 9))
-                lines.append(f"  - {label}: {tally}")
+                lines.append(f"    - {label}: {tally}")
             else:
-                lines.append(f"  - {label}: No vote recorded")
+                lines.append(f"    - {label}: No vote recorded")
         if ds["extras"]:
-            lines.append(f"  - *Additional notes:*")
+            lines.append(f"    - *Additional notes:*")
             for note in ds["extras"]:
                 lines.append(f"    - {note}")
     lines.append("")
