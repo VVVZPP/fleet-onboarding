@@ -1,0 +1,127 @@
+[
+  {
+    "name": "OPPPSSS JJ",
+    "dept": "Operations",
+    "o1": {
+      "rec": "yes",
+      "pros": "[Partners] Fewer charging issue escalations \u2014 CDG ENGIE can resolve directly with drivers.",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "yes",
+      "pros": "[Partners/Corporate Customers] Fastest onboarding \u2014 no driver data collection required.\n[Drivers] Simply follow the provided login details and start charging.",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "no",
+      "pros": "",
+      "cons": "\ufe0f Card-based charging is incompatible with some chargers on the network \u2014 past issues required manual resolution.",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-26T06:28:21.586546",
+    "id": 1
+  },
+  {
+    "name": "vvvv",
+    "dept": "Sales",
+    "o1": {
+      "rec": "yes",
+      "pros": "[CDG ENGIE] Builds a real customer database; enables marketing, personalised communications & accurate reporting.",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "no",
+      "pros": "",
+      "cons": "[CDG ENGIE] No direct engagement channel with end users; charging issues require manual intervention; difficult to attribute transactions to specific drivers.",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "cond",
+      "pros": "[Drivers] Familiar UX for drivers already accustomed to fuel cards.",
+      "cons": "\ufe0f Card-based charging is incompatible with some chargers on the network \u2014 past issues required manual resolution.",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-26T06:30:36.749155",
+    "id": 2
+  },
+  {
+    "name": "WWEE",
+    "dept": "Solutioning",
+    "o1": {
+      "rec": "cond",
+      "pros": "[Partners] Fewer charging issue escalations \u2014 CDG ENGIE can resolve directly with drivers.",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "yes",
+      "pros": "[CDG ENGIE] Faster whitelisting via mass account creation.",
+      "cons": "[Partners/Corporate Customers] Must manually intervene for every credential issue, increasing support burden.",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "no",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-26T06:31:50.890454",
+    "id": 3
+  },
+  {
+    "name": "ccc",
+    "dept": "Corporate & Performance Management",
+    "o1": {
+      "rec": "yes",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "yes",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "cond",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-26T06:32:42.047135",
+    "id": 4
+  },
+  {
+    "name": "annnnnn",
+    "dept": "Corporate & Performance Management",
+    "o1": {
+      "rec": "yes",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "cond",
+      "pros": "this can really reduce the frictions for app registration",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "no",
+      "pros": "",
+      "cons": "\ufe0f Card-based charging is incompatible with some chargers on the network \u2014 past issues required manual resolution.",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-26T06:33:38.651416",
+    "id": 5
+  }
+]

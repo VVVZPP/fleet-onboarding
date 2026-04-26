@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleet Onboarding Options Review — Interactive Form & AI Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      background: #f3f4f6;
+      color: #1f2937;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header { background: #1e3a5f; color: #fff; padding: 18px 24px 16px; position: relative; }
+    .header-label { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #93c5fd; margin-bottom: 4px; }
+    .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; }
+    .header-sub { font-size: 12px; color: #bfdbfe; margin-bottom: 10px; }
+    .tag-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 2px 10px; font-size: 11px; color: #e0f2fe; }
+    /* Admin button in header */
+    .header-admin-btn {
+      position: absolute; top: 16px; right: 20px;
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28);
+      border-radius: 999px; padding: 5px 13px 5px 10px;
+      font-size: 11px; font-weight: 600; color: #e0f2fe;
+      cursor: pointer; transition: background .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .header-admin-btn:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.45); }
+    .header-admin-btn .lock-icon { font-size: 13px; }
+    /* Logged-in state */
+    .header-admin-btn.admin-active {
+      background: rgba(251,191,36,.18); border-color: #fbbf24; color: #fde68a;
+    }
+    .header-admin-btn.admin-active:hover { background: rgba(251,191,36,.28); }
+    .admin-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; display: inline-block; flex-shrink: 0; }
+
+    /* ── Tab bar ── */
+    .tab-bar { display: flex; background: #fff; border-bottom: 1px solid #e5e7eb; }
+    .tab-btn { flex: 1; padding: 11px 0; font-size: 13px; font-weight: 500; border: none; background: transparent; cursor: pointer; color: #6b7280; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; }
+    .tab-btn.active { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+    .tab-btn:hover:not(.active) { color: #374151; }
+    .tab-btn.hidden { display: none; }
+
+    /* ── Main ── */
+    .main { padding: 16px; max-width: 780px; margin: 0 auto; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Context / Briefing card ── */
+    .context-card {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e4976 100%);
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 14px;
+      color: #fff;
+    }
+    .context-card .ctx-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: #93c5fd; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .context-card h2 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #fff; }
+    .context-card p { font-size: 12.5px; color: #bfdbfe; line-height: 1.65; margin-bottom: 10px; }
+    .context-card p:last-child { margin-bottom: 0; }
+    .perspective-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 12px 0;
+    }
+    .perspective-pill {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .perspective-pill .pp-icon { font-size: 16px; margin-bottom: 4px; }
+    .perspective-pill .pp-title { font-size: 11px; font-weight: 700; color: #e0f2fe; margin-bottom: 3px; }
+    .perspective-pill .pp-desc { font-size: 11px; color: #93c5fd; line-height: 1.4; }
+    .context-divider { border: none; border-top: 1px solid rgba(255,255,255,.15); margin: 12px 0; }
+    .context-goal-label { font-size: 11px; font-weight: 700; color: #fbbf24; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+    .your-role-box {
+      background: rgba(255,255,255,.08); border-left: 3px solid #60a5fa;
+      border-radius: 0 6px 6px 0; padding: 10px 12px; margin-top: 10px;
+    }
+    .your-role-box .yr-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #93c5fd; margin-bottom: 4px; }
+    .your-role-box p { font-size: 12px; color: #dbeafe; line-height: 1.55; margin: 0; }
+
+    /* ── Cards ── */
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+
+    /* ── Identity ── */
+    .identity-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px; }
+    .field-label { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+    .field-label .req { color: #ef4444; }
+    input[type="text"], select, textarea {
+      width: 100%; border: 1px solid #d1d5db; border-radius: 5px; padding: 7px 9px;
+      font-size: 13px; color: #374151; background: #fff; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input[type="text"]:focus, select:focus, textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+    select { appearance: auto; }
+
+    .section-heading { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9ca3af; margin: 14px 0 10px; }
+
+    /* ── Option card ── */
+    .option-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+    .option-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .option-header-left { display: flex; align-items: center; gap: 8px; }
+    .option-badge { font-size: 11px; font-weight: 600; border-radius: 4px; padding: 2px 8px; }
+    .badge-1 { background: #dbeafe; color: #1d4ed8; }
+    .badge-2 { background: #dcfce7; color: #15803d; }
+    .badge-3 { background: #fef3c7; color: #b45309; }
+    .option-title { font-size: 13px; font-weight: 600; color: #111827; }
+    .status-badge { font-size: 10px; font-weight: 600; border-radius: 4px; padding: 2px 8px; }
+    .status-preferred { background: #dcfce7; color: #15803d; }
+    .status-deprioritised { background: #fee2e2; color: #b91c1c; }
+    .option-desc { font-size: 12px; color: #4b5563; margin-bottom: 10px; line-height: 1.5; }
+    .warning-banner { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 5px; padding: 8px 10px; font-size: 12px; color: #b91c1c; margin-bottom: 10px; line-height: 1.5; }
+
+    /* ── AI assist ── */
+    .ai-assist-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .ai-btn { display: flex; align-items: center; gap: 5px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 5px; padding: 4px 10px; font-size: 12px; color: #1d4ed8; cursor: pointer; font-weight: 500; transition: background .15s; }
+    .ai-btn:hover { background: #dbeafe; }
+    .ai-btn svg { width: 13px; height: 13px; }
+
+    /* ── Recommend ── */
+    .recommend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .recommend-label { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #6b7280; margin-right: 2px; }
+    .recommend-required { color: #ef4444; margin-left: 2px; }
+    .rec-error { font-size: 11px; color: #b91c1c; margin-top: 5px; display: none; }
+    .rec-error.visible { display: block; }
+    .recommend-row.error-state { background: #fff5f5; border-radius: 6px; padding: 6px 8px; border: 1px solid #fca5a5; margin-bottom: 10px; }
+    .rec-btn { border: 1px solid #d1d5db; border-radius: 999px; padding: 3px 12px; font-size: 12px; background: #fff; color: #374151; cursor: pointer; font-weight: 500; transition: all .15s; }
+    .rec-btn:hover { border-color: #9ca3af; }
+    .rec-btn.selected-yes { background: #dcfce7; border-color: #86efac; color: #15803d; font-weight: 600; }
+    .rec-btn.selected-cond { background: #fef9c3; border-color: #fde047; color: #854d0e; font-weight: 600; }
+    .rec-btn.selected-no { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; font-weight: 600; }
+
+    /* ── PCM grid ── */
+    .pcm-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .pcm-label { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+    textarea { resize: vertical; min-height: 72px; font-size: 12px; line-height: 1.4; }
+    .char-count { text-align: right; font-size: 10px; color: #9ca3af; margin-top: 2px; }
+
+    .extra-section { margin-top: 4px; }
+    .extra-section textarea { min-height: 72px; }
+
+    /* ── Submit ── */
+    .submit-row { display: flex; justify-content: flex-end; margin-top: 16px; }
+    .submit-btn { background: #1d4ed8; color: #fff; border: none; border-radius: 6px; padding: 9px 22px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .submit-btn:hover { background: #1e40af; }
+    .submit-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    /* ── Dashboard ── */
+    .dash-header { background: #1e3a5f; color: #fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .dash-header h2 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+    .dash-header p { font-size: 12px; color: #bfdbfe; }
+    .refresh-btn { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); border-radius: 5px; color: #fff; padding: 5px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .refresh-btn:hover { background: rgba(255,255,255,.25); }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+    .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; text-align: center; }
+    .stat-number { font-size: 26px; font-weight: 700; color: #1d4ed8; }
+    .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+    /* ── Per-option summary ── */
+    .section-title { font-size: 13px; font-weight: 700; color: #111827; margin: 16px 0 8px; display: flex; align-items: center; gap: 6px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+
+    .option-summary-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+    .option-summary-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+    .verdict-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .verdict-pill { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 2px 10px; }
+    .vp-yes { background: #dcfce7; color: #15803d; }
+    .vp-cond { background: #fef9c3; color: #854d0e; }
+    .vp-no { background: #fee2e2; color: #b91c1c; }
+
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 12px; margin-bottom: 10px; }
+    .summary-col-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 4px; }
+    .summary-col-body { color: #374151; line-height: 1.5; }
+    .summary-col-body.empty { color: #d1d5db; font-style: italic; }
+    .summary-bullet-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+    .summary-bullet-list li { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: #374151; line-height: 1.5; }
+    .summary-bullet-list li::before { content: '\2022'; color: #6b7280; font-size: 14px; line-height: 1.3; flex-shrink: 0; }
+
+    /* ── Per-dept breakdown ── */
+    .dept-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .dept-table th { text-align: left; padding: 7px 10px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; }
+    .dept-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+    .dept-table tr:last-child td { border-bottom: none; }
+    .dept-name { font-weight: 600; color: #111827; }
+    .dept-count { font-size: 11px; color: #6b7280; }
+    .mini-verdict { display: inline-block; font-size: 10px; font-weight: 600; border-radius: 4px; padding: 1px 6px; margin: 1px; }
+    .mv-yes { background: #dcfce7; color: #15803d; }
+    .mv-cond { background: #fef9c3; color: #854d0e; }
+    .mv-no { background: #fee2e2; color: #b91c1c; }
+    .mv-none { background: #f3f4f6; color: #9ca3af; }
+    .dept-yes-summary-row td { background: #f0fdf4; border-top: 2px solid #bbf7d0; font-weight: 700; }
+    .yes-count-badge { display: inline-block; font-size: 12px; font-weight: 700; color: #15803d; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; padding: 2px 10px; }
+
+    /* ── Submissions list ── */
+    .sub-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; margin-bottom: 6px; }
+    .sub-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .sub-name { font-weight: 600; color: #111827; font-size: 12px; }
+    .sub-dept { font-size: 11px; color: #6b7280; margin-left: 6px; }
+    .sub-time { font-size: 10px; color: #9ca3af; }
+    .sub-verdicts { display: flex; gap: 4px; flex-wrap: wrap; }
+
+    /* ── AI synthesis section ── */
+    .synthesis-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-top: 4px; }
+    .synthesis-box h3 { font-size: 13px; font-weight: 700; color: #0369a1; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .synthesis-content { font-size: 13px; color: #0c4a6e; line-height: 1.7; }
+    .synthesis-content.empty { color: #94a3b8; font-style: italic; }
+    .synthesis-content h1 { font-size: 18px; font-weight: 700; color: #0c4a6e; margin: 18px 0 4px; }
+    .synthesis-content h2 { font-size: 15px; font-weight: 700; color: #0c4a6e; margin: 16px 0 4px; border-bottom: 1px solid #bae6fd; padding-bottom: 4px; }
+    .synthesis-content h3 { font-size: 14px; font-weight: 700; color: #0369a1; margin: 14px 0 4px; }
+    .synthesis-content h4 { font-size: 13px; font-weight: 600; color: #0369a1; margin: 10px 0 2px; }
+    .synthesis-content p { margin: 6px 0; }
+    .synthesis-content ul { margin: 6px 0 6px 18px; padding: 0; list-style: disc; }
+    .synthesis-content ol { margin: 6px 0 6px 18px; padding: 0; list-style: decimal; }
+    .synthesis-content li { margin: 3px 0; line-height: 1.6; }
+    .synthesis-content strong { font-weight: 700; color: #075985; }
+    .synthesis-content hr { border: none; border-top: 1px solid #bae6fd; margin: 14px 0; }
+    .synthesis-content .synth-subheading { font-size: 13px; font-weight: 400; color: #0369a1; font-style: italic; margin: 2px 0 8px; }
+    .synth-btn { background: #0369a1; color: #fff; border: none; border-radius: 6px; padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; transition: background .15s; }
+    .synth-btn:hover { background: #075985; }
+    .synth-btn:disabled { background: #7dd3fc; cursor: not-allowed; }
+    .synth-btn svg { width: 14px; height: 14px; }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 48px 24px; color: #9ca3af; }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; line-height: 1.5; max-width: 340px; margin: 0 auto; }
+
+    /* ── Live indicator ── */
+    .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; margin-right: 5px; animation: pulse 1.8s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 20px 22px; width: 90%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .modal-header h3 { font-size: 14px; font-weight: 700; color: #111827; }
+    .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #9ca3af; line-height: 1; }
+    .modal-close:hover { color: #374151; }
+    .modal-body { font-size: 13px; color: #374151; line-height: 1.6; margin-bottom: 14px; }
+    .modal-suggestions { display: flex; flex-direction: column; gap: 6px; }
+    .suggestion-btn { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #374151; cursor: pointer; text-align: left; transition: background .15s; }
+    .suggestion-btn:hover { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+    /* ── Admin modal ── */
+    .admin-modal { max-width: 380px; }
+    .admin-modal .pin-input { width: 100%; border: 1px solid #d1d5db; border-radius: 6px; padding: 9px 12px; font-size: 15px; letter-spacing: .2em; text-align: center; outline: none; margin-bottom: 10px; }
+    .admin-modal .pin-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+    .admin-modal .pin-error { color: #b91c1c; font-size: 12px; margin-bottom: 8px; display: none; }
+    .admin-modal .pin-submit { width: 100%; background: #1d4ed8; color: #fff; border: none; border-radius: 6px; padding: 9px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .admin-modal .pin-submit:hover { background: #1e40af; }
+
+    /* ── Admin panel ── */
+    .admin-panel { background: #fffbeb; border: 2px solid #fbbf24; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+    .admin-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .admin-panel-title { font-size: 12px; font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 6px; }
+    .admin-logout { font-size: 11px; color: #6b7280; background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+    .admin-logout:hover { background: #f9fafb; }
+    .admin-controls { display: flex; flex-direction: column; gap: 12px; }
+    .admin-control-row { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #e5e7eb; border-radius: 7px; padding: 10px 14px; }
+    .admin-control-info { display: flex; flex-direction: column; gap: 2px; }
+    .admin-control-label { font-size: 12px; font-weight: 600; color: #111827; }
+    .admin-control-desc { font-size: 11px; color: #6b7280; }
+    .admin-toggle-right { display: flex; align-items: center; gap: 10px; }
+    .toggle-state-label { font-size: 11px; font-weight: 700; }
+    .toggle-state-on  { color: #15803d; }
+    .toggle-state-off { color: #9ca3af; }
+    /* Toggle switch */
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 999px; transition: .2s; }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    input:checked + .toggle-slider { background: #16a34a; }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .admin-danger-row { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #fca5a5; border-radius: 7px; padding: 10px 14px; }
+    .clear-btn-admin { background: #fff; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 5px; padding: 5px 14px; font-size: 12px; cursor: pointer; font-weight: 500; }
+    .clear-btn-admin:hover { background: #fef2f2; }
+
+    /* ── Admin access button (bottom of dashboard) ── */
+    .admin-access-bar { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .admin-access-bar-left { font-size: 12px; color: #9ca3af; }
+    .admin-access-btn { background: #fff; border: 1px solid #d1d5db; color: #374151; border-radius: 5px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500; }
+    .admin-access-btn:hover { background: #f9fafb; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 500; z-index: 200; transition: transform .3s ease; pointer-events: none; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 560px) {
+      .identity-row, .pcm-grid, .stats-row, .summary-grid, .perspective-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-label">CDG ENGIE</div>
+  <h1>Fleet Onboarding Options Review</h1>
+  <div class="header-sub">Workshop to optimize the onboarding workflow for fleet partners (leasing companies, fuel wholesalers, fleet aggregators), as well as corporate customers (B2B/B2B2C/B2B2E).</div>
+  <div class="tag-row">
+    <span class="tag">Goal: fast setup</span>
+    <span class="tag">manageable ops</span>
+    <span class="tag">reliable for drivers</span>
+  </div>
+  <!-- Admin button top-right -->
+  <button class="header-admin-btn" id="header-admin-btn" onclick="handleHeaderAdminClick()">
+    <span class="lock-icon" id="header-admin-icon">🔐</span>
+    <span id="header-admin-label">Admin Login</span>
+  </button>
+</div>
+
+<!-- Tab bar -->
+<div class="tab-bar" id="tab-bar">
+  <button class="tab-btn active" id="tab-btn-form" onclick="switchTab('form')">Submit response</button>
+  <button class="tab-btn hidden" id="tab-btn-dashboard" onclick="switchTab('dashboard')">
+    <span class="live-dot"></span>AI synthesis dashboard
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     FORM TAB
+══════════════════════════════════════ -->
+<div id="tab-form" class="tab-panel active">
+  <div class="main">
+
+    <!-- Context / Briefing -->
+    <div class="context-card">
+      <div class="ctx-label">🎯 Guiding Goal</div>
+      <p>We want an onboarding flow that is <strong>fast</strong> for the fleet partner to set up, <strong>manageable</strong> for our internal teams to operate, and <strong>reliable</strong> for drivers at the point of charging — with minimal escalations once live.</p>
+      <p>As you respond, consider three perspectives:</p>
+      <div class="perspective-row">
+        <div class="perspective-pill">
+          <div class="pp-icon">🏢</div>
+          <div class="pp-title">Your Department</div>
+          <div class="pp-desc">What works and what creates friction from your team's point of view</div>
+        </div>
+        <div class="perspective-pill">
+          <div class="pp-icon">🤝</div>
+          <div class="pp-title">Corporate Fleet Partner</div>
+          <div class="pp-desc">What they need for a smooth, confident setup experience</div>
+        </div>
+        <div class="perspective-pill">
+          <div class="pp-icon">🚗</div>
+          <div class="pp-title">Individual Driver</div>
+          <div class="pp-desc">What ensures a seamless, frustration-free charging experience on the ground</div>
+        </div>
+      </div>
+      <hr class="context-divider" />
+      <div class="context-goal-label">🤝 Our Goal Today</div>
+      <p>Build cross-departmental alignment. We want everyone to understand why Sales offers different onboarding options to meet varied customer needs — and we want support functions to surface the operational challenges they currently face or anticipate.</p>
+      <div class="your-role-box">
+        <div class="yr-label">Your Role</div>
+        <p>Review the onboarding options and share your insights on the best approach for fleet user onboarding and their ongoing charging experience on our EV charging platform.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="identity-row">
+        <div>
+          <div class="field-label">Your Name <span class="req">*</span></div>
+          <input type="text" id="name" placeholder="e.g. Sarah Tan" />
+        </div>
+        <div>
+          <div class="field-label">Department</div>
+          <select id="dept">
+            <option value="">Select department</option>
+            <option value="Sales">Sales</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Solutioning">Solutioning</option>
+            <option value="Operations">Operations</option>
+            <option value="Corporate & Performance Management">Corporate &amp; Performance Management</option>
+            <option value="Finance">Finance</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-heading">Option Assessment</div>
+
+      <!-- Option 1 -->
+      <div class="option-card">
+        <div class="option-header">
+          <div class="option-header-left">
+            <span class="option-badge badge-1">Option 1</span>
+            <span class="option-title">Actual user details</span>
+          </div>
+          <span class="status-badge status-preferred">Preferred</span>
+        </div>
+        <div class="option-desc">Each driver registers with their real name, phone, and email. Partner collects via registration form submitted by their corporate PIC.</div>
+        <div class="ai-assist-row">
+          <button class="ai-btn" onclick="openAI(1)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            AI assist
+          </button>
+        </div>
+        <div class="recommend-row" id="rec-row-1">
+          <span class="recommend-label">Recommend? <span class="recommend-required">*</span></span>
+          <button class="rec-btn" onclick="setRec(1,'yes',this)">Yes</button>
+          <button class="rec-btn" onclick="setRec(1,'cond',this)">Conditional</button>
+          <button class="rec-btn" onclick="setRec(1,'no',this)">No</button>
+        </div>
+        <div class="rec-error" id="rec-error-1">Please select a recommendation for Option 1.</div>
+        <div class="pcm-grid">
+          <div><div class="pcm-label">Pros</div><textarea id="o1p" placeholder="What works well…" oninput="updateCount(this,'c1p')"></textarea><div class="char-count" id="c1p">0 chars</div></div>
+          <div><div class="pcm-label">Cons</div><textarea id="o1c" placeholder="Risks or friction…" oninput="updateCount(this,'c1c')"></textarea><div class="char-count" id="c1c">0 chars</div></div>
+          <div><div class="pcm-label">Mitigations</div><textarea id="o1m" placeholder="Conditions that help…" oninput="updateCount(this,'c1m')"></textarea><div class="char-count" id="c1m">0 chars</div></div>
+        </div>
+      </div>
+
+      <!-- Option 2 -->
+      <div class="option-card">
+        <div class="option-header">
+          <div class="option-header-left">
+            <span class="option-badge badge-2">Option 2</span>
+            <span class="option-title">Dummy accounts</span>
+          </div>
+        </div>
+        <div class="option-desc">Mass accounts created upfront by internal team without individual driver details.</div>
+        <div class="ai-assist-row">
+          <button class="ai-btn" onclick="openAI(2)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            AI assist
+          </button>
+        </div>
+        <div class="recommend-row" id="rec-row-2">
+          <span class="recommend-label">Recommend? <span class="recommend-required">*</span></span>
+          <button class="rec-btn" onclick="setRec(2,'yes',this)">Yes</button>
+          <button class="rec-btn" onclick="setRec(2,'cond',this)">Conditional</button>
+          <button class="rec-btn" onclick="setRec(2,'no',this)">No</button>
+        </div>
+        <div class="rec-error" id="rec-error-2">Please select a recommendation for Option 2.</div>
+        <div class="pcm-grid">
+          <div><div class="pcm-label">Pros</div><textarea id="o2p" placeholder="What works well…" oninput="updateCount(this,'c2p')"></textarea><div class="char-count" id="c2p">0 chars</div></div>
+          <div><div class="pcm-label">Cons</div><textarea id="o2c" placeholder="Risks or friction…" oninput="updateCount(this,'c2c')"></textarea><div class="char-count" id="c2c">0 chars</div></div>
+          <div><div class="pcm-label">Mitigations</div><textarea id="o2m" placeholder="Conditions that help…" oninput="updateCount(this,'c2m')"></textarea><div class="char-count" id="c2m">0 chars</div></div>
+        </div>
+      </div>
+
+      <!-- Option 3 -->
+      <div class="option-card">
+        <div class="option-header">
+          <div class="option-header-left">
+            <span class="option-badge badge-3">Option 3</span>
+            <span class="option-title">Fleet cards</span>
+          </div>
+          <span class="status-badge status-deprioritised">Deprioritised</span>
+        </div>
+        <div class="warning-banner">Note: Card-based charging is incompatible with some chargers on our network. Past issues required manual resolution. Include input if your team has relevant experience or foresees edge cases.</div>
+        <div class="option-desc">Physical cards issued per driver.</div>
+        <div class="ai-assist-row">
+          <button class="ai-btn" onclick="openAI(3)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            AI assist
+          </button>
+        </div>
+        <div class="recommend-row" id="rec-row-3">
+          <span class="recommend-label">Recommend? <span class="recommend-required">*</span></span>
+          <button class="rec-btn" onclick="setRec(3,'yes',this)">Yes</button>
+          <button class="rec-btn" onclick="setRec(3,'cond',this)">Conditional</button>
+          <button class="rec-btn" onclick="setRec(3,'no',this)">No</button>
+        </div>
+        <div class="rec-error" id="rec-error-3">Please select a recommendation for Option 3.</div>
+        <div class="pcm-grid">
+          <div><div class="pcm-label">Pros</div><textarea id="o3p" placeholder="Any valid use cases…" oninput="updateCount(this,'c3p')"></textarea><div class="char-count" id="c3p">0 chars</div></div>
+          <div><div class="pcm-label">Cons</div><textarea id="o3c" placeholder="Known issues…" oninput="updateCount(this,'c3c')"></textarea><div class="char-count" id="c3c">0 chars</div></div>
+          <div><div class="pcm-label">Mitigations</div><textarea id="o3m" placeholder="If it must be done…" oninput="updateCount(this,'c3m')"></textarea><div class="char-count" id="c3m">0 chars</div></div>
+        </div>
+      </div>
+
+      <div class="extra-section">
+        <div class="field-label">Any other considerations or open questions?</div>
+        <textarea id="extra" placeholder="Cross-team dependencies, edge cases not covered above…" oninput="updateCount(this,'cex')"></textarea>
+        <div class="char-count" id="cex">0 chars</div>
+      </div>
+
+      <div class="submit-row">
+        <button class="submit-btn" id="submit-btn" onclick="submitForm()">Submit response</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD TAB
+══════════════════════════════════════ -->
+<div id="tab-dashboard" class="tab-panel">
+  <div class="main">
+
+    <!-- Admin panel (shown when logged in) -->
+    <div class="admin-panel" id="admin-panel" style="display:none;">
+      <div class="admin-panel-header">
+        <div class="admin-panel-title">🔐 Admin Controls</div>
+        <button class="admin-logout" onclick="adminLogout()">Log out</button>
+      </div>
+      <div class="admin-controls">
+        <div class="admin-control-row">
+          <div class="admin-control-info">
+            <div class="admin-control-label">AI Synthesis Dashboard visibility</div>
+            <div class="admin-control-desc">When ON, all users can see and access the dashboard tab. When OFF, the tab is hidden from everyone except you.</div>
+          </div>
+          <div class="admin-toggle-right">
+            <span class="toggle-state-label" id="dash-toggle-label">OFF</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="dash-toggle" onchange="toggleDashboard(this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="admin-danger-row">
+          <div class="admin-control-info">
+            <div class="admin-control-label" style="color:#b91c1c;">Clear all submissions</div>
+            <div class="admin-control-desc">Permanently deletes all responses. Use to restart a new collection round.</div>
+          </div>
+          <button class="clear-btn-admin" onclick="clearAll()">Clear all</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-header card" style="margin-bottom:12px;">
+      <div>
+        <h2>AI Synthesis Dashboard</h2>
+        <p id="dash-meta">Loading submissions…</p>
+      </div>
+      <button class="refresh-btn" onclick="loadDashboard()">↻ Refresh</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="stat-number" id="stat-total">—</div><div class="stat-label">Total Responses</div></div>
+      <div class="stat-card"><div class="stat-number" id="stat-depts">—</div><div class="stat-label">Departments</div></div>
+      <div class="stat-card"><div class="stat-number" id="stat-yes">—</div><div class="stat-label">Opt 1 Yes votes</div></div>
+      <div class="stat-card"><div class="stat-number" id="stat-cond">—</div><div class="stat-label">Opt 1 Conditional</div></div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="dash-empty" style="display:none;">
+      <div class="icon">📊</div>
+      <h3>No responses yet</h3>
+      <p>Share this page link with your team. Responses will appear here in real time.</p>
+    </div>
+
+    <!-- Content (shown when responses exist) -->
+    <div id="dash-content" style="display:none;">
+
+      <!-- Per-option breakdown -->
+      <div class="section-title">Per-Option Breakdown</div>
+
+      <div class="option-summary-card">
+        <div class="option-summary-header">
+          <div class="option-header-left">
+            <span class="option-badge badge-1">Option 1</span>
+            <span class="option-title">Actual user details</span>
+          </div>
+          <div class="verdict-row" id="opt1-verdicts"></div>
+        </div>
+        <div class="summary-grid">
+          <div><div class="summary-col-label">Pros</div><div class="summary-col-body" id="d1p">—</div></div>
+          <div><div class="summary-col-label">Cons</div><div class="summary-col-body" id="d1c">—</div></div>
+          <div><div class="summary-col-label">Mitigations</div><div class="summary-col-body" id="d1m">—</div></div>
+        </div>
+      </div>
+
+      <div class="option-summary-card">
+        <div class="option-summary-header">
+          <div class="option-header-left">
+            <span class="option-badge badge-2">Option 2</span>
+            <span class="option-title">Dummy accounts</span>
+          </div>
+          <div class="verdict-row" id="opt2-verdicts"></div>
+        </div>
+        <div class="summary-grid">
+          <div><div class="summary-col-label">Pros</div><div class="summary-col-body" id="d2p">—</div></div>
+          <div><div class="summary-col-label">Cons</div><div class="summary-col-body" id="d2c">—</div></div>
+          <div><div class="summary-col-label">Mitigations</div><div class="summary-col-body" id="d2m">—</div></div>
+        </div>
+      </div>
+
+      <div class="option-summary-card">
+        <div class="option-summary-header">
+          <div class="option-header-left">
+            <span class="option-badge badge-3">Option 3</span>
+            <span class="option-title">Fleet cards</span>
+          </div>
+          <div class="verdict-row" id="opt3-verdicts"></div>
+        </div>
+        <div class="summary-grid">
+          <div><div class="summary-col-label">Pros</div><div class="summary-col-body" id="d3p">—</div></div>
+          <div><div class="summary-col-label">Cons</div><div class="summary-col-body" id="d3c">—</div></div>
+          <div><div class="summary-col-label">Mitigations</div><div class="summary-col-body" id="d3m">—</div></div>
+        </div>
+      </div>
+
+      <!-- Per-department breakdown -->
+      <div class="section-title">Per-Department Perspectives</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table class="dept-table">
+          <thead>
+            <tr>
+              <th>Department</th>
+              <th>Responses</th>
+              <th>Option 1</th>
+              <th>Option 2</th>
+              <th>Option 3</th>
+              <th>Key notes</th>
+            </tr>
+          </thead>
+          <tbody id="dept-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- All submissions list -->
+      <div class="section-title">All Submissions</div>
+      <div id="submissions-list"></div>
+
+      <!-- AI Synthesis -->
+      <div class="section-title">AI Synthesis</div>
+      <div class="synthesis-box">
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/></svg>
+          AI-Generated Synthesis
+        </h3>
+        <button class="synth-btn" id="synth-btn" onclick="runSynthesis()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+          Generate AI Synthesis
+        </button>
+        <div class="synthesis-content empty" id="synth-output">Click the button above to generate an AI synthesis of all submissions.</div>
+      </div>
+
+    </div><!-- /dash-content -->
+
+    <!-- Admin access bar (always visible at bottom of dashboard) -->
+    <div class="admin-access-bar" id="admin-access-bar">
+      <div class="admin-access-bar-left" id="admin-bar-label">Admin access required to manage settings.</div>
+      <button class="admin-access-btn" id="admin-access-btn" onclick="openAdminModal()">Admin login</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- AI Assist Modal -->
+<div class="modal-overlay" id="ai-modal" onclick="closeAIModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">AI Assist</h3>
+      <button class="modal-close" onclick="closeModal('ai-modal')">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-suggestions" id="modal-suggestions"></div>
+  </div>
+</div>
+
+<!-- Admin PIN Modal -->
+<div class="modal-overlay" id="admin-modal" onclick="closeAdminModal(event)">
+  <div class="modal admin-modal">
+    <div class="modal-header">
+      <h3>🔐 Admin Login</h3>
+      <button class="modal-close" onclick="closeModal('admin-modal')">×</button>
+    </div>
+    <div class="modal-body">Enter the admin PIN to access management controls.</div>
+    <input type="password" class="pin-input" id="pin-input" placeholder="••••••••" maxlength="20"
+      onkeydown="if(event.key==='Enter')submitPin()" />
+    <div class="pin-error" id="pin-error">Incorrect PIN. Please try again.</div>
+    <button class="pin-submit" onclick="submitPin()">Unlock Admin Controls</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ─────────────────────────────────────────
+     State
+  ───────────────────────────────────────── */
+  const recs = { 1: null, 2: null, 3: null };
+  let adminPin = null;   // stored in memory only for this session
+
+  const aiPrompts = {
+    1: {
+      title: 'AI Assist — Option 1: Actual User Details',
+      body: 'Key insights by stakeholder perspective:',
+      suggestions: [
+        '✅ [CDG ENGIE] Builds a real customer database; enables marketing, personalised communications & accurate reporting.',
+        '✅ [Partners] Fewer charging issue escalations — CDG ENGIE can resolve directly with drivers.',
+        '✅ [Drivers] Self-service OTP password reset.',
+        '❌ [Partners/Corporate customers] Slower registration process; driver data must be collected individually.',
+        '❌ [Drivers] Duplicate account risk if a driver already has a personal CDG ENGIE account.',
+      ]
+    },
+    2: {
+      title: 'AI Assist — Option 2: Dummy Accounts',
+      body: 'Key insights by stakeholder perspective:',
+      suggestions: [
+        '✅ [CDG ENGIE] Faster whitelisting via mass account creation.',
+        '✅ [Partners/Corporate Customers] Fastest onboarding — no driver data collection required.',
+        '✅ [Drivers] Simply follow the provided login details and start charging.',
+        '❌ [CDG ENGIE] No direct engagement channel with end users; charging issues require manual intervention; difficult to attribute transactions to specific drivers.',
+        '❌ [Partners/Corporate Customers] Must manually intervene for every credential issue, increasing support burden.',
+        '❌ [Drivers] Cannot self-resolve login issues via OTP; must escalate to Partner → CDG ENGIE, resulting in longer resolution times.',
+      ]
+    },
+    3: {
+      title: 'AI Assist — Option 3: Fleet Cards',
+      body: 'Key insights by stakeholder perspective:',
+      suggestions: [
+        '✅ [Drivers] Familiar UX for drivers already accustomed to fuel cards.',
+        '⚠️ Card-based charging is incompatible with some chargers on the network — past issues required manual resolution.',
+      ]
+    }
+  };
+
+  /* ─────────────────────────────────────────
+     Init: load settings and apply tab visibility
+  ───────────────────────────────────────── */
+  async function initApp() {
+    try {
+      const res = await fetch('/api/settings');
+      const s = await res.json();
+      applyDashboardVisibility(s.dashboard_visible);
+    } catch(e) {
+      // default: hide dashboard
+      applyDashboardVisibility(false);
+    }
+  }
+
+  function applyDashboardVisibility(visible) {
+    const btn = document.getElementById('tab-btn-dashboard');
+    if (visible) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+      // If currently on dashboard, switch back to form
+      if (document.getElementById('tab-dashboard').classList.contains('active')) {
+        switchTab('form');
+      }
+    }
+    // Sync toggle if admin is logged in
+    const toggle = document.getElementById('dash-toggle');
+    if (toggle) toggle.checked = !!visible;
+  }
+
+  /* ─────────────────────────────────────────
+     Tab switching
+  ───────────────────────────────────────── */
+  function switchTab(tab) {
+    document.getElementById('tab-btn-form').classList.toggle('active', tab === 'form');
+    document.getElementById('tab-btn-dashboard').classList.toggle('active', tab === 'dashboard');
+    document.getElementById('tab-form').classList.toggle('active', tab === 'form');
+    document.getElementById('tab-dashboard').classList.toggle('active', tab === 'dashboard');
+    if (tab === 'dashboard') loadDashboard();
+  }
+
+  /* ─────────────────────────────────────────
+     Form helpers
+  ───────────────────────────────────────── */
+  function updateCount(el, id) {
+    document.getElementById(id).textContent = el.value.length + ' chars';
+  }
+
+  function setRec(n, val, btn) {
+    const row = btn.closest('.recommend-row');
+    row.querySelectorAll('.rec-btn').forEach(b => b.className = 'rec-btn');
+    recs[n] = val;
+    btn.classList.add('selected-' + val);
+    // Clear error state on selection
+    row.classList.remove('error-state');
+    const err = document.getElementById('rec-error-' + n);
+    if (err) err.classList.remove('visible');
+  }
+
+  /* ─────────────────────────────────────────
+     AI Assist modal
+  ───────────────────────────────────────── */
+  function openAI(num) {
+    const data = aiPrompts[num];
+    document.getElementById('modal-title').textContent = data.title;
+    document.getElementById('modal-body').textContent = data.body;
+    const c = document.getElementById('modal-suggestions');
+    c.innerHTML = '';
+    data.suggestions.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'suggestion-btn';
+      btn.textContent = s;
+      btn.onclick = () => applySuggestion(num, s);
+      c.appendChild(btn);
+    });
+    document.getElementById('ai-modal').classList.add('open');
+  }
+
+  function applySuggestion(num, text) {
+    // Strip leading emoji + space
+    const clean = text.replace(/^[\u2705\u274c\u26a0\ufe0f\ud83d\udd27\ud83d\udccb]\s*/u, '').replace(/^\u26a0\ufe0f\s*/, '');
+    if (text.startsWith('\u2705')) {
+      // ✅ → Pros
+      const el = document.getElementById('o' + num + 'p');
+      el.value = (el.value ? el.value + '\n' : '') + clean;
+      updateCount(el, 'c' + num + 'p');
+    } else if (text.startsWith('\u274c') || text.startsWith('\u26a0')) {
+      // ❌ / ⚠️ → Cons
+      const el = document.getElementById('o' + num + 'c');
+      el.value = (el.value ? el.value + '\n' : '') + clean;
+      updateCount(el, 'c' + num + 'c');
+    }
+    showToast('Suggestion applied!');
+    closeModal('ai-modal');
+  }
+
+  function closeAIModal(e) { if (e.target.id === 'ai-modal') closeModal('ai-modal'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  /* ─────────────────────────────────────────
+     Admin PIN modal
+  ───────────────────────────────────────── */
+  function openAdminModal() {
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-error').style.display = 'none';
+    document.getElementById('admin-modal').classList.add('open');
+    setTimeout(() => document.getElementById('pin-input').focus(), 100);
+  }
+
+  function closeAdminModal(e) { if (e.target.id === 'admin-modal') closeModal('admin-modal'); }
+
+  async function submitPin() {
+    const pin = document.getElementById('pin-input').value.trim();
+    if (!pin) return;
+    try {
+      const res = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: { 'x-admin-pin': pin }
+      });
+      if (!res.ok) {
+        document.getElementById('pin-error').style.display = 'block';
+        return;
+      }
+      adminPin = pin;
+      closeModal('admin-modal');
+      showAdminPanel();
+      showToast('Admin access granted.');
+    } catch(e) {
+      document.getElementById('pin-error').style.display = 'block';
+    }
+  }
+
+  function setHeaderAdminState(loggedIn) {
+    const btn = document.getElementById('header-admin-btn');
+    const icon = document.getElementById('header-admin-icon');
+    const label = document.getElementById('header-admin-label');
+    if (loggedIn) {
+      btn.classList.add('admin-active');
+      icon.innerHTML = '<span class="admin-dot"></span>';
+      label.textContent = 'Admin · Log out';
+    } else {
+      btn.classList.remove('admin-active');
+      icon.textContent = '🔐';
+      label.textContent = 'Admin Login';
+    }
+  }
+
+  function handleHeaderAdminClick() {
+    if (adminPin) {
+      // Already logged in — log out
+      adminLogout();
+    } else {
+      // Not logged in — open PIN modal
+      openAdminModal();
+    }
+  }
+
+  function showAdminPanel() {
+    document.getElementById('admin-panel').style.display = 'block';
+    document.getElementById('admin-access-bar').style.display = 'none';
+    setHeaderAdminState(true);
+    // Sync toggle with current settings
+    fetch('/api/settings').then(r => r.json()).then(s => {
+      const checked = !!s.dashboard_visible;
+      document.getElementById('dash-toggle').checked = checked;
+      const lbl = document.getElementById('dash-toggle-label');
+      if (lbl) {
+        lbl.textContent = checked ? 'ON' : 'OFF';
+        lbl.className = 'toggle-state-label ' + (checked ? 'toggle-state-on' : 'toggle-state-off');
+      }
+      // Admin can always see the dashboard tab while logged in
+      document.getElementById('tab-btn-dashboard').classList.remove('hidden');
+    });
+  }
+
+  function adminLogout() {
+    adminPin = null;
+    document.getElementById('admin-panel').style.display = 'none';
+    document.getElementById('admin-access-bar').style.display = 'flex';
+    setHeaderAdminState(false);
+    // Re-apply server visibility for regular users after logout
+    fetch('/api/settings').then(r => r.json()).then(s => {
+      applyDashboardVisibility(s.dashboard_visible);
+    });
+    showToast('Logged out of admin.');
+  }
+
+  /* ─────────────────────────────────────────
+     Admin: toggle dashboard visibility
+  ───────────────────────────────────────── */
+  async function toggleDashboard(visible) {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-pin': adminPin },
+        body: JSON.stringify({ dashboard_visible: visible })
+      });
+      if (!res.ok) { showToast('Error updating settings.'); return; }
+      // Update label
+      const lbl = document.getElementById('dash-toggle-label');
+      if (lbl) {
+        lbl.textContent = visible ? 'ON' : 'OFF';
+        lbl.className = 'toggle-state-label ' + (visible ? 'toggle-state-on' : 'toggle-state-off');
+      }
+      // Admin always keeps the tab; only affects other users
+      showToast(visible ? 'Dashboard tab is now visible to all users.' : 'Dashboard tab is now hidden from regular users.');
+    } catch(e) {
+      showToast('Error updating settings.');
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Submit form → backend
+  ───────────────────────────────────────── */
+  async function submitForm() {
+    const name = document.getElementById('name').value.trim();
+    if (!name) { showToast('Please enter your name.'); return; }
+
+    // Validate all three Recommend? fields
+    let recValid = true;
+    [1, 2, 3].forEach(n => {
+      const row = document.getElementById('rec-row-' + n);
+      const err = document.getElementById('rec-error-' + n);
+      if (!recs[n]) {
+        row.classList.add('error-state');
+        err.classList.add('visible');
+        recValid = false;
+      } else {
+        row.classList.remove('error-state');
+        err.classList.remove('visible');
+      }
+    });
+    if (!recValid) {
+      showToast('Please select a recommendation for all three options.');
+      // Scroll to first unanswered option
+      const firstErr = document.querySelector('.rec-error.visible');
+      if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    const payload = {
+      name,
+      dept: document.getElementById('dept').value,
+      o1: { rec: recs[1], pros: document.getElementById('o1p').value.trim(), cons: document.getElementById('o1c').value.trim(), mitigations: document.getElementById('o1m').value.trim() },
+      o2: { rec: recs[2], pros: document.getElementById('o2p').value.trim(), cons: document.getElementById('o2c').value.trim(), mitigations: document.getElementById('o2m').value.trim() },
+      o3: { rec: recs[3], pros: document.getElementById('o3p').value.trim(), cons: document.getElementById('o3c').value.trim(), mitigations: document.getElementById('o3m').value.trim() },
+      extra: document.getElementById('extra').value.trim(),
+    };
+
+    try {
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Server error');
+      const data = await res.json();
+      showToast('Response submitted! (' + data.total + ' total so far)');
+      // Show success message on form
+      btn.textContent = '✓ Submitted';
+      btn.style.background = '#15803d';
+    } catch (e) {
+      showToast('Submission failed. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Submit response';
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Load & render dashboard
+  ───────────────────────────────────────── */
+  async function loadDashboard() {
+    try {
+      const res = await fetch('/api/submissions');
+      const subs = await res.json();
+      renderDashboard(subs);
+    } catch (e) {
+      document.getElementById('dash-meta').textContent = 'Error loading submissions.';
+    }
+  }
+
+  function renderDashboard(subs) {
+    const total = subs.length;
+    document.getElementById('dash-empty').style.display = total === 0 ? 'block' : 'none';
+    document.getElementById('dash-content').style.display = total === 0 ? 'none' : 'block';
+
+    if (total === 0) {
+      document.getElementById('dash-meta').textContent = 'No submissions yet — share this link with your team.';
+      document.getElementById('stat-total').textContent = '0';
+      document.getElementById('stat-depts').textContent = '0';
+      document.getElementById('stat-yes').textContent = '0';
+      document.getElementById('stat-cond').textContent = '0';
+      return;
+    }
+
+    const depts = [...new Set(subs.map(s => s.dept).filter(Boolean))];
+    const last = subs[subs.length - 1];
+    const lastTime = new Date(last.timestamp + 'Z').toLocaleString();
+    document.getElementById('dash-meta').textContent =
+      total + ' response' + (total > 1 ? 's' : '') + ' from ' + (depts.length || '—') + ' department(s) · Last: ' + last.name + ' at ' + lastTime;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-depts').textContent = depts.length || '—';
+    document.getElementById('stat-yes').textContent = subs.filter(s => s.o1.rec === 'yes').length;
+    document.getElementById('stat-cond').textContent = subs.filter(s => s.o1.rec === 'cond').length;
+
+    [1, 2, 3].forEach(n => renderOptionSummary(n, subs));
+    renderDeptTable(subs);
+    renderSubmissionsList(subs);
+  }
+
+  function renderOptionSummary(n, subs) {
+    const key = 'o' + n;
+    const yesCount  = subs.filter(s => s[key].rec === 'yes').length;
+    const condCount = subs.filter(s => s[key].rec === 'cond').length;
+    const noCount   = subs.filter(s => s[key].rec === 'no').length;
+
+    const vRow = document.getElementById('opt' + n + '-verdicts');
+    vRow.innerHTML = '';
+    if (yesCount)  vRow.innerHTML += `<span class="verdict-pill vp-yes">Yes ×${yesCount}</span>`;
+    if (condCount) vRow.innerHTML += `<span class="verdict-pill vp-cond">Conditional ×${condCount}</span>`;
+    if (noCount)   vRow.innerHTML += `<span class="verdict-pill vp-no">No ×${noCount}</span>`;
+    if (!yesCount && !condCount && !noCount) vRow.innerHTML = '<span style="font-size:11px;color:#9ca3af">No votes yet</span>';
+
+    setField('d' + n + 'p', subs.map(s => s[key].pros).filter(Boolean));
+    setField('d' + n + 'c', subs.map(s => s[key].cons).filter(Boolean));
+    setField('d' + n + 'm', subs.map(s => s[key].mitigations).filter(Boolean));
+  }
+
+  function setField(id, arr) {
+    const el = document.getElementById(id);
+    if (!arr.length) { el.textContent = 'No input provided.'; el.className = 'summary-col-body empty'; return; }
+    // Split each submission's text by newline, flatten, deduplicate, then render as bullet list
+    const lines = arr
+      .flatMap(s => s.split('\n'))
+      .map(s => s.trim())
+      .filter(Boolean);
+    const unique = [...new Set(lines)];
+    el.className = 'summary-col-body';
+    el.innerHTML = '';
+    const ul = document.createElement('ul');
+    ul.className = 'summary-bullet-list';
+    unique.forEach(line => {
+      const li = document.createElement('li');
+      li.textContent = line;
+      ul.appendChild(li);
+    });
+    el.appendChild(ul);
+  }
+
+  function renderDeptTable(subs) {
+    const grouped = {};
+    subs.forEach(s => {
+      const d = s.dept || '(No dept)';
+      if (!grouped[d]) grouped[d] = [];
+      grouped[d].push(s);
+    });
+
+    const tbody = document.getElementById('dept-tbody');
+    tbody.innerHTML = '';
+
+    Object.entries(grouped).forEach(([dept, dsubs]) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><span class="dept-name">${esc(dept)}</span></td><td><span class="dept-count">${dsubs.length} response${dsubs.length > 1 ? 's' : ''}</span></td>`;
+
+      [1, 2, 3].forEach(n => {
+        const key = 'o' + n;
+        const tally = {};
+        dsubs.map(s => s[key].rec).filter(Boolean).forEach(v => { tally[v] = (tally[v] || 0) + 1; });
+        let cell = '';
+        if (tally.yes)  cell += `<span class="mini-verdict mv-yes">Yes ×${tally.yes}</span>`;
+        if (tally.cond) cell += `<span class="mini-verdict mv-cond">Cond ×${tally.cond}</span>`;
+        if (tally.no)   cell += `<span class="mini-verdict mv-no">No ×${tally.no}</span>`;
+        if (!cell)       cell = '<span class="mini-verdict mv-none">—</span>';
+        tr.innerHTML += `<td>${cell}</td>`;
+      });
+
+      const notes = dsubs.map(s => s.extra).filter(Boolean);
+      tr.innerHTML += `<td style="font-size:11px;color:#4b5563;max-width:180px;">${notes.length ? esc(notes.join(' / ')) : '<span style="color:#d1d5db">—</span>'}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    // ── Count of Yes summary row ──
+    const summaryTr = document.createElement('tr');
+    summaryTr.className = 'dept-yes-summary-row';
+    summaryTr.innerHTML = `<td style="font-weight:700;color:#111827;font-size:12px;">Count of Yes</td><td></td>`;
+    [1, 2, 3].forEach(n => {
+      const key = 'o' + n;
+      const yesCount = subs.filter(s => s[key].rec === 'yes').length;
+      summaryTr.innerHTML += `<td><span class="yes-count-badge">${yesCount} Yes</span></td>`;
+    });
+    summaryTr.innerHTML += `<td></td>`;
+    tbody.appendChild(summaryTr);
+  }
+
+  function renderSubmissionsList(subs) {
+    const container = document.getElementById('submissions-list');
+    container.innerHTML = '';
+    const recLabel = { yes: 'Yes', cond: 'Conditional', no: 'No' };
+    const recClass = { yes: 'mv-yes', cond: 'mv-cond', no: 'mv-no' };
+    [...subs].reverse().forEach(s => {
+      const time = new Date(s.timestamp + 'Z').toLocaleString();
+      const div = document.createElement('div');
+      div.className = 'sub-item';
+      div.innerHTML = `
+        <div class="sub-item-header">
+          <div><span class="sub-name">${esc(s.name)}</span><span class="sub-dept">${esc(s.dept || '—')}</span></div>
+          <span class="sub-time">${time}</span>
+        </div>
+        <div class="sub-verdicts">
+          <span style="font-size:10px;color:#6b7280;margin-right:4px;">Opt 1:</span>
+          <span class="mini-verdict ${recClass[s.o1.rec] || 'mv-none'}">${recLabel[s.o1.rec] || '—'}</span>
+          <span style="font-size:10px;color:#6b7280;margin:0 4px;">Opt 2:</span>
+          <span class="mini-verdict ${recClass[s.o2.rec] || 'mv-none'}">${recLabel[s.o2.rec] || '—'}</span>
+          <span style="font-size:10px;color:#6b7280;margin:0 4px;">Opt 3:</span>
+          <span class="mini-verdict ${recClass[s.o3.rec] || 'mv-none'}">${recLabel[s.o3.rec] || '—'}</span>
+        </div>
+        ${s.extra ? `<div style="margin-top:5px;font-size:11px;color:#6b7280;font-style:italic;">"${esc(s.extra)}"</div>` : ''}
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* Light markdown-to-HTML renderer for AI synthesis output */
+  function parseMarkdown(md) {
+    const lines = md.split('\n');
+    let html = '';
+    let inUl = false, inOl = false;
+
+    const closeList = () => {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (inOl) { html += '</ol>'; inOl = false; }
+    };
+
+    lines.forEach(raw => {
+      const line = raw;
+
+      // Horizontal rule
+      if (/^---+$/.test(line.trim())) {
+        closeList();
+        html += '<hr>';
+        return;
+      }
+
+      // Headings
+      const h4 = line.match(/^####\s+(.+)/);
+      const h3 = line.match(/^###\s+(.+)/);
+      const h2 = line.match(/^##\s+(.+)/);
+      const h1 = line.match(/^#\s+(.+)/);
+      if (h1) { closeList(); html += `<h1>${inlineFormat(h1[1])}</h1>`; return; }
+      if (h2) { closeList(); html += `<h2>${inlineFormat(h2[1])}</h2>`; return; }
+      if (h3) { closeList(); html += `<h3>${inlineFormat(h3[1])}</h3>`; return; }
+      if (h4) { closeList(); html += `<h4>${inlineFormat(h4[1])}</h4>`; return; }
+
+      // Ordered list item
+      const olItem = line.match(/^\d+\.\s+(.+)/);
+      if (olItem) {
+        if (inUl) { html += '</ul>'; inUl = false; }
+        if (!inOl) { html += '<ol>'; inOl = true; }
+        html += `<li>${inlineFormat(olItem[1])}</li>`;
+        return;
+      }
+
+      // Unordered list item (-, *, •)
+      const ulItem = line.match(/^[-*\u2022]\s+(.+)/);
+      if (ulItem) {
+        if (inOl) { html += '</ol>'; inOl = false; }
+        if (!inUl) { html += '<ul>'; inUl = true; }
+        html += `<li>${inlineFormat(ulItem[1])}</li>`;
+        return;
+      }
+
+      // Indented sub-bullet (  - or   -)
+      const subItem = line.match(/^\s{2,}[-*]\s+(.+)/);
+      if (subItem) {
+        if (!inUl) { html += '<ul>'; inUl = true; }
+        html += `<li style="margin-left:16px">${inlineFormat(subItem[1])}</li>`;
+        return;
+      }
+
+      // Blank line
+      if (line.trim() === '') {
+        closeList();
+        return;
+      }
+
+      // Regular paragraph
+      closeList();
+      html += `<p>${inlineFormat(line)}</p>`;
+    });
+
+    closeList();
+    return html;
+  }
+
+  function inlineFormat(text) {
+    // Bold+italic ***text***
+    text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    // Bold **text**
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic *text*
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Inline code `text`
+    text = text.replace(/`(.+?)`/g, '<code style="background:#e0f2fe;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>');
+    return text;
+  }
+
+  /* ─────────────────────────────────────────
+     AI Synthesis
+  ───────────────────────────────────────── */
+  async function runSynthesis() {
+    const btn = document.getElementById('synth-btn');
+    const output = document.getElementById('synth-output');
+    btn.disabled = true;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M5 3l14 9-14 9V3z"/></svg> Generating…`;
+    output.className = 'synthesis-content';
+    output.textContent = 'Analysing all submissions…';
+
+    try {
+      const res = await fetch('/api/synthesise');
+      const data = await res.json();
+      if (!res.ok) { output.textContent = 'Error: ' + (data.detail || 'Unknown error'); return; }
+      const raw = data.synthesis || 'No synthesis returned.';
+      output.innerHTML = parseMarkdown(raw);
+    } catch (e) {
+      output.textContent = 'Error connecting to AI service: ' + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M5 3l14 9-14 9V3z"/></svg> Regenerate AI Synthesis`;
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Admin: clear all submissions
+  ───────────────────────────────────────── */
+  async function clearAll() {
+    if (!confirm('Clear ALL submissions? This cannot be undone.')) return;
+    const res = await fetch('/api/submissions', {
+      method: 'DELETE',
+      headers: { 'x-admin-pin': adminPin }
+    });
+    if (!res.ok) { showToast('Error: could not clear submissions.'); return; }
+    document.getElementById('synth-output').textContent = 'Click the button above to generate an AI synthesis of all submissions.';
+    document.getElementById('synth-output').className = 'synthesis-content empty';
+    loadDashboard();
+    showToast('All submissions cleared.');
+  }
+
+  /* ─────────────────────────────────────────
+     Toast
+  ───────────────────────────────────────── */
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  /* ─────────────────────────────────────────
+     Auto-refresh dashboard every 20s
+  ───────────────────────────────────────── */
+  setInterval(() => {
+    if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboard();
+  }, 20000);
+
+  // Boot
+  initApp();
+</script>
+</body>
+</html>
