@@ -225,6 +225,8 @@
     .synthesis-content .synth-subheading { font-size: 13px; font-weight: 400; color: #0369a1; font-style: italic; margin: 2px 0 8px; }
     .synthesis-content ul.synth-sub-list { margin: 4px 0 4px 24px; list-style: circle; }
     .synthesis-content ul.synth-sub-list li { margin: 2px 0; }
+    .synthesis-content ul.synth-deep-list { margin: 4px 0 4px 24px; list-style: square; }
+    .synthesis-content ul.synth-deep-list li { margin: 2px 0; }
     .synthesis-content li.synth-sub-header { list-style: disc; }
     .synth-btn { background: #0369a1; color: #fff; border: none; border-radius: 6px; padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; transition: background .15s; }
     .synth-btn:hover { background: #075985; }
@@ -1154,28 +1156,51 @@
   function parseMarkdown(md) {
     const lines = md.split('\n');
     let html = '';
-    // Track list nesting: level 0 = no list, 1 = top-level ul/ol, 2 = nested ul
-    let inUl = false, inOl = false, inNestedUl = false;
 
-    const closeNestedUl = () => {
-      if (inNestedUl) { html += '</ul></li>'; inNestedUl = false; }
+    // Stack-based list tracker: each entry = { tag, class }
+    // Levels: 0 = outside list, 1 = top-level ul/ol, 2 = nested ul (sub-header children), 3 = deeply nested ul
+    let listStack = []; // stack of open list tags
+    let lastLiOpen = false; // whether the last <li> was left open for nesting
+
+    const openList = (cls) => {
+      const tag = `<ul${cls ? ` class="${cls}"` : ''}>`;
+      html += tag;
+      listStack.push(cls || 'ul');
     };
-    const closeList = () => {
-      closeNestedUl();
-      if (inUl) { html += '</ul>'; inUl = false; }
-      if (inOl) { html += '</ol>'; inOl = false; }
+    const closeTopList = () => {
+      if (listStack.length === 0) return;
+      if (lastLiOpen) { html += '</li>'; lastLiOpen = false; }
+      html += '</ul>';
+      listStack.pop();
+    };
+    const closeAllLists = () => {
+      while (listStack.length > 0) closeTopList();
+    };
+    const closeToDepth = (depth) => {
+      while (listStack.length > depth) closeTopList();
     };
 
-    // Detect if a list item text is a "Key Pros" / "Key Cons" / "Key Mitigations" label
-    // (bold-only item with no trailing sentence — acts as a sub-section header)
-    const isSubHeader = (text) => /^\*\*[^*]+:\*\*\s*$/.test(text.trim()) || /^\*[^*]+:\*\s*$/.test(text.trim());
+    // Is this a bold-label-only item like **Key Pros:** or **Key Cons:**
+    const isSubHeader = (text) =>
+      /^\*\*[^*]+:\*\*\s*$/.test(text.trim()) ||
+      /^\*[^*]+:\*\s*$/.test(text.trim());
+
+    // Measure indent level: 0 = no indent, 1 = 2-3 spaces, 2 = 4+ spaces
+    const indentLevel = (line) => {
+      const m = line.match(/^(\s+)/);
+      if (!m) return 0;
+      const sp = m[1].length;
+      if (sp >= 4) return 2;
+      if (sp >= 2) return 1;
+      return 0;
+    };
 
     lines.forEach(raw => {
       const line = raw;
 
       // Horizontal rule
       if (/^---+$/.test(line.trim())) {
-        closeList();
+        closeAllLists();
         html += '<hr>';
         return;
       }
@@ -1185,67 +1210,86 @@
       const h3 = line.match(/^###\s+(.+)/);
       const h2 = line.match(/^##\s+(.+)/);
       const h1 = line.match(/^#\s+(.+)/);
-      if (h1) { closeList(); html += `<h1>${inlineFormat(h1[1])}</h1>`; return; }
-      if (h2) { closeList(); html += `<h2>${inlineFormat(h2[1])}</h2>`; return; }
-      if (h3) { closeList(); html += `<h3>${inlineFormat(h3[1])}</h3>`; return; }
-      if (h4) { closeList(); html += `<h4>${inlineFormat(h4[1])}</h4>`; return; }
+      if (h1) { closeAllLists(); html += `<h1>${inlineFormat(h1[1])}</h1>`; return; }
+      if (h2) { closeAllLists(); html += `<h2>${inlineFormat(h2[1])}</h2>`; return; }
+      if (h3) { closeAllLists(); html += `<h3>${inlineFormat(h3[1])}</h3>`; return; }
+      if (h4) { closeAllLists(); html += `<h4>${inlineFormat(h4[1])}</h4>`; return; }
 
       // Ordered list item (top-level: no leading spaces)
       const olItem = line.match(/^\d+\.\s+(.+)/);
       if (olItem) {
-        closeNestedUl();
-        if (inUl) { html += '</ul>'; inUl = false; }
-        if (!inOl) { html += '<ol>'; inOl = true; }
+        closeAllLists();
+        html += '<ol>';
         html += `<li>${inlineFormat(olItem[1])}</li>`;
+        html += '</ol>';
         return;
       }
 
-      // Indented sub-bullet (2+ spaces then - or *): always nested
-      const subItem = line.match(/^(\s{2,})[-*\u2022]\s+(.+)/);
-      if (subItem) {
-        if (!inUl && !inOl) { html += '<ul>'; inUl = true; }
-        if (!inNestedUl) {
-          // Open a nested <ul> inside the last <li>
-          // We need to reopen the last li — use a wrapper approach
-          html += '<ul class="synth-sub-list">';
-          inNestedUl = true;
-        }
-        html += `<li>${inlineFormat(subItem[2])}</li>`;
-        return;
-      }
+      // Unordered list item — detect indent level
+      const ulMatch = line.match(/^(\s*)[-*\u2022]\s+(.+)/);
+      if (ulMatch) {
+        const indent = indentLevel(line);
+        const text = ulMatch[2];
 
-      // Top-level unordered list item (-, *, •) — no leading spaces
-      const ulItem = line.match(/^[-*\u2022]\s+(.+)/);
-      if (ulItem) {
-        closeNestedUl();
-        if (inOl) { html += '</ol>'; inOl = false; }
-        if (!inUl) { html += '<ul>'; inUl = true; }
-        const text = ulItem[1];
-        if (isSubHeader(text)) {
-          // Label item that will have children indented under it
-          html += `<li class="synth-sub-header">${inlineFormat(text)}`;
-          // Leave li open — nested ul will be appended, closed by closeNestedUl
-          inNestedUl = false; // reset so next sub-items open a new nested ul inside this li
-          // We mark that the next indented items belong here by setting a flag
-          // Actually we just leave the <li> open and let subItem handler append <ul> inside
+        if (indent === 0) {
+          // Top-level bullet — close everything back to depth 0
+          closeToDepth(0);
+          openList('');
+          if (isSubHeader(text)) {
+            // Leave <li> open so nested items go inside it
+            html += `<li class="synth-sub-header">${inlineFormat(text)}`;
+            lastLiOpen = true;
+          } else {
+            html += `<li>${inlineFormat(text)}</li>`;
+            lastLiOpen = false;
+          }
+        } else if (indent === 1) {
+          // Second-level bullet (2-space indent)
+          if (listStack.length < 1) openList('');
+          if (listStack.length < 2) {
+            // Open nested list inside the last open <li>
+            if (!lastLiOpen) { html += '<li>'; lastLiOpen = true; }
+            openList('synth-sub-list');
+          }
+          // Close back to depth 2 if we went deeper
+          closeToDepth(2);
+          if (isSubHeader(text)) {
+            html += `<li class="synth-sub-header">${inlineFormat(text)}`;
+            lastLiOpen = true;
+          } else {
+            html += `<li>${inlineFormat(text)}</li>`;
+            lastLiOpen = false;
+          }
         } else {
+          // Third-level bullet (4+ space indent) — goes inside the open sub-header li
+          if (listStack.length < 2) {
+            if (listStack.length < 1) openList('');
+            if (!lastLiOpen) { html += '<li>'; lastLiOpen = true; }
+            openList('synth-sub-list');
+          }
+          if (listStack.length < 3) {
+            if (!lastLiOpen) { html += '<li>'; lastLiOpen = true; }
+            openList('synth-deep-list');
+          }
+          closeToDepth(3);
           html += `<li>${inlineFormat(text)}</li>`;
+          lastLiOpen = false;
         }
         return;
       }
 
       // Blank line
       if (line.trim() === '') {
-        closeList();
+        closeAllLists();
         return;
       }
 
       // Regular paragraph
-      closeList();
+      closeAllLists();
       html += `<p>${inlineFormat(line)}</p>`;
     });
 
-    closeList();
+    closeAllLists();
     return html;
   }
 
