@@ -223,6 +223,9 @@
     .synthesis-content strong { font-weight: 700; color: #075985; }
     .synthesis-content hr { border: none; border-top: 1px solid #bae6fd; margin: 14px 0; }
     .synthesis-content .synth-subheading { font-size: 13px; font-weight: 400; color: #0369a1; font-style: italic; margin: 2px 0 8px; }
+    .synthesis-content ul.synth-sub-list { margin: 4px 0 4px 24px; list-style: circle; }
+    .synthesis-content ul.synth-sub-list li { margin: 2px 0; }
+    .synthesis-content li.synth-sub-header { list-style: disc; }
     .synth-btn { background: #0369a1; color: #fff; border: none; border-radius: 6px; padding: 8px 18px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; transition: background .15s; }
     .synth-btn:hover { background: #075985; }
     .synth-btn:disabled { background: #7dd3fc; cursor: not-allowed; }
@@ -1151,12 +1154,21 @@
   function parseMarkdown(md) {
     const lines = md.split('\n');
     let html = '';
-    let inUl = false, inOl = false;
+    // Track list nesting: level 0 = no list, 1 = top-level ul/ol, 2 = nested ul
+    let inUl = false, inOl = false, inNestedUl = false;
 
+    const closeNestedUl = () => {
+      if (inNestedUl) { html += '</ul></li>'; inNestedUl = false; }
+    };
     const closeList = () => {
+      closeNestedUl();
       if (inUl) { html += '</ul>'; inUl = false; }
       if (inOl) { html += '</ol>'; inOl = false; }
     };
+
+    // Detect if a list item text is a "Key Pros" / "Key Cons" / "Key Mitigations" label
+    // (bold-only item with no trailing sentence — acts as a sub-section header)
+    const isSubHeader = (text) => /^\*\*[^*]+:\*\*\s*$/.test(text.trim()) || /^\*[^*]+:\*\s*$/.test(text.trim());
 
     lines.forEach(raw => {
       const line = raw;
@@ -1178,29 +1190,47 @@
       if (h3) { closeList(); html += `<h3>${inlineFormat(h3[1])}</h3>`; return; }
       if (h4) { closeList(); html += `<h4>${inlineFormat(h4[1])}</h4>`; return; }
 
-      // Ordered list item
+      // Ordered list item (top-level: no leading spaces)
       const olItem = line.match(/^\d+\.\s+(.+)/);
       if (olItem) {
+        closeNestedUl();
         if (inUl) { html += '</ul>'; inUl = false; }
         if (!inOl) { html += '<ol>'; inOl = true; }
         html += `<li>${inlineFormat(olItem[1])}</li>`;
         return;
       }
 
-      // Unordered list item (-, *, •)
-      const ulItem = line.match(/^[-*\u2022]\s+(.+)/);
-      if (ulItem) {
-        if (inOl) { html += '</ol>'; inOl = false; }
-        if (!inUl) { html += '<ul>'; inUl = true; }
-        html += `<li>${inlineFormat(ulItem[1])}</li>`;
+      // Indented sub-bullet (2+ spaces then - or *): always nested
+      const subItem = line.match(/^(\s{2,})[-*\u2022]\s+(.+)/);
+      if (subItem) {
+        if (!inUl && !inOl) { html += '<ul>'; inUl = true; }
+        if (!inNestedUl) {
+          // Open a nested <ul> inside the last <li>
+          // We need to reopen the last li — use a wrapper approach
+          html += '<ul class="synth-sub-list">';
+          inNestedUl = true;
+        }
+        html += `<li>${inlineFormat(subItem[2])}</li>`;
         return;
       }
 
-      // Indented sub-bullet (  - or   -)
-      const subItem = line.match(/^\s{2,}[-*]\s+(.+)/);
-      if (subItem) {
+      // Top-level unordered list item (-, *, •) — no leading spaces
+      const ulItem = line.match(/^[-*\u2022]\s+(.+)/);
+      if (ulItem) {
+        closeNestedUl();
+        if (inOl) { html += '</ol>'; inOl = false; }
         if (!inUl) { html += '<ul>'; inUl = true; }
-        html += `<li style="margin-left:16px">${inlineFormat(subItem[1])}</li>`;
+        const text = ulItem[1];
+        if (isSubHeader(text)) {
+          // Label item that will have children indented under it
+          html += `<li class="synth-sub-header">${inlineFormat(text)}`;
+          // Leave li open — nested ul will be appended, closed by closeNestedUl
+          inNestedUl = false; // reset so next sub-items open a new nested ul inside this li
+          // We mark that the next indented items belong here by setting a flag
+          // Actually we just leave the <li> open and let subItem handler append <ul> inside
+        } else {
+          html += `<li>${inlineFormat(text)}</li>`;
+        }
         return;
       }
 
