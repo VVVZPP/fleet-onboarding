@@ -1157,112 +1157,93 @@
     const lines = md.split('\n');
     let html = '';
 
-    // Simple two-level list renderer:
-    // - indent 0 (no spaces): top-level bullet (•)
-    // - indent 1 (2-3 spaces): ALSO rendered as top-level bullet (•) — same level as option header
-    // - indent 2 (4+ spaces): rendered as one-level-indented circle bullet (○)
-    // This matches the target: Option / Sentiment / Key Pros / Key Cons all at same level,
-    // with only detail items under Key Pros/Cons/Mitigations indented.
+    // Three-level list renderer:
+    // - indent 0 (0 spaces):  top-level bullet  (•)  — option names, dept names
+    // - indent 4 (4-7 spaces): mid-level circle  (○)  — Sentiment, Vote breakdown, Key Pros label, Key Cons label, Mitigations label
+    // - indent 8 (8+ spaces): deep circle        (○)  — items under Key Pros / Key Cons / Mitigations
 
-    let inTopList = false;   // a <ul> is open at top level
-    let inDeepList = false;  // a <ul class="synth-deep-list"> is open inside current top <li>
-    let lastLiOpen = false;  // last top-level <li> was left open for deep nesting
+    let inL1 = false;      // outer <ul> open
+    let inL2 = false;      // mid <ul class="synth-sub-list"> open
+    let inL3 = false;      // deep <ul class="synth-deep-list"> open
+    let l1LiOpen = false;  // last L1 <li> left open
+    let l2LiOpen = false;  // last L2 <li> left open
 
-    const closeDeep = () => {
-      if (inDeepList) { html += '</ul>'; inDeepList = false; }
-    };
-    const closeTopLi = () => {
-      if (lastLiOpen) { html += '</li>'; lastLiOpen = false; }
-    };
-    const closeTopList = () => {
-      closeDeep();
-      closeTopLi();
-      if (inTopList) { html += '</ul>'; inTopList = false; }
-    };
+    const closeL3 = () => { if (inL3) { html += '</ul>'; inL3 = false; } };
+    const closeL2Li = () => { if (l2LiOpen) { html += '</li>'; l2LiOpen = false; } };
+    const closeL2 = () => { closeL3(); closeL2Li(); if (inL2) { html += '</ul>'; inL2 = false; } };
+    const closeL1Li = () => { if (l1LiOpen) { html += '</li>'; l1LiOpen = false; } };
+    const closeAll = () => { closeL2(); closeL1Li(); if (inL1) { html += '</ul>'; inL1 = false; } };
 
-    // Is this a bold-label-only item like **Key Pros:** or **Key Cons:**
-    const isSubHeader = (text) =>
-      /^\*\*[^*]+:\*\*\s*$/.test(text.trim()) ||
-      /^\*[^*]+:\*\s*$/.test(text.trim());
-
-    // Measure indent level: 0/1 = flat top, 2 = deep (circle)
     const indentLevel = (line) => {
       const m = line.match(/^(\s+)/);
       if (!m) return 0;
-      return m[1].length >= 4 ? 2 : 1;
+      const n = m[1].length;
+      if (n >= 8) return 3;
+      if (n >= 4) return 2;
+      return 1;
     };
 
     lines.forEach(raw => {
       const line = raw;
 
-      // Horizontal rule
-      if (/^---+$/.test(line.trim())) {
-        closeTopList();
-        html += '<hr>';
-        return;
-      }
+      if (/^---+$/.test(line.trim())) { closeAll(); html += '<hr>'; return; }
 
-      // Headings
       const h4 = line.match(/^####\s+(.+)/);
       const h3 = line.match(/^###\s+(.+)/);
       const h2 = line.match(/^##\s+(.+)/);
       const h1 = line.match(/^#\s+(.+)/);
-      if (h1) { closeTopList(); html += `<h1>${inlineFormat(h1[1])}</h1>`; return; }
-      if (h2) { closeTopList(); html += `<h2>${inlineFormat(h2[1])}</h2>`; return; }
-      if (h3) { closeTopList(); html += `<h3>${inlineFormat(h3[1])}</h3>`; return; }
-      if (h4) { closeTopList(); html += `<h4>${inlineFormat(h4[1])}</h4>`; return; }
+      if (h1) { closeAll(); html += `<h1>${inlineFormat(h1[1])}</h1>`; return; }
+      if (h2) { closeAll(); html += `<h2>${inlineFormat(h2[1])}</h2>`; return; }
+      if (h3) { closeAll(); html += `<h3>${inlineFormat(h3[1])}</h3>`; return; }
+      if (h4) { closeAll(); html += `<h4>${inlineFormat(h4[1])}</h4>`; return; }
 
-      // Ordered list item
       const olItem = line.match(/^\d+\.\s+(.+)/);
-      if (olItem) {
-        closeTopList();
-        html += '<ol>';
-        html += `<li>${inlineFormat(olItem[1])}</li>`;
-        html += '</ol>';
-        return;
-      }
+      if (olItem) { closeAll(); html += `<ol><li>${inlineFormat(olItem[1])}</li></ol>`; return; }
 
-      // Unordered list item
       const ulMatch = line.match(/^(\s*)[-*\u2022]\s+(.+)/);
       if (ulMatch) {
-        const indent = indentLevel(line);
+        const lvl = indentLevel(line);
         const text = ulMatch[2];
 
-        if (indent < 2) {
-          // Flat top-level bullet (indent 0 or 1 both go here)
-          closeDeep();
-          closeTopLi();
-          if (!inTopList) { html += '<ul>'; inTopList = true; }
-          if (isSubHeader(text)) {
-            // Leave <li> open so deep items can nest inside
-            html += `<li class="synth-sub-header">${inlineFormat(text)}`;
-            lastLiOpen = true;
+        if (lvl <= 1) {
+          // L1: top-level bullet
+          closeL2(); closeL1Li();
+          if (!inL1) { html += '<ul>'; inL1 = true; }
+          html += `<li>${inlineFormat(text)}`;
+          l1LiOpen = true;
+        } else if (lvl === 2) {
+          // L2: mid circle bullet — leave open if it looks like a label header
+          closeL3(); closeL2Li();
+          if (!inL1) { html += '<ul>'; inL1 = true; }
+          if (!l1LiOpen) { html += '<li>'; l1LiOpen = true; }
+          if (!inL2) { html += '<ul class="synth-sub-list">'; inL2 = true; }
+          const isLabel = /^\*\*[^*]+:\*\*\s*$/.test(text.trim()) || /^\*[^*]+:\*\s*$/.test(text.trim());
+          if (isLabel) {
+            html += `<li>${inlineFormat(text)}`;
+            l2LiOpen = true;
           } else {
             html += `<li>${inlineFormat(text)}</li>`;
-            lastLiOpen = false;
+            l2LiOpen = false;
           }
         } else {
-          // Deep bullet (4+ spaces) — circle, indented under current open <li>
-          if (!inTopList) { html += '<ul>'; inTopList = true; }
-          if (!lastLiOpen) { html += '<li>'; lastLiOpen = true; }
-          if (!inDeepList) { html += '<ul class="synth-deep-list">'; inDeepList = true; }
+          // L3: deep circle bullet — nested under open L2 label
+          if (!inL1) { html += '<ul>'; inL1 = true; }
+          if (!l1LiOpen) { html += '<li>'; l1LiOpen = true; }
+          if (!inL2) { html += '<ul class="synth-sub-list">'; inL2 = true; }
+          if (!l2LiOpen) { html += '<li>'; l2LiOpen = true; }
+          if (!inL3) { html += '<ul class="synth-deep-list">'; inL3 = true; }
           html += `<li>${inlineFormat(text)}</li>`;
         }
         return;
       }
 
-      // Blank line
-      if (line.trim() === '') {
-        closeTopList();
-        return;
-      }
+      if (line.trim() === '') { closeAll(); return; }
 
-      // Paragraph
-      closeTopList();
+      closeAll();
       html += `<p>${inlineFormat(line)}</p>`;
     });
 
-    closeTopList();
+    closeAll();
     return html;
   }
 
