@@ -301,12 +301,13 @@ def synthesise():
         risks.append("Option 1 (Actual User Details) has conditional supporters — slower registration and duplicate account risk need to be addressed.")
     if all_extras:
         risks.append("Additional open questions raised by respondents:")
-        for note in all_extras:
-            risks.append(f"  - {note}")
     if not risks:
         risks.append("No specific risks or open questions were flagged beyond standard operational considerations.")
     for r in risks:
         lines.append(f"- {r}")
+    if all_extras:
+        for note in all_extras:
+            lines.append(f"    - {note}")
     lines.append("")
     lines.append("---")
 
