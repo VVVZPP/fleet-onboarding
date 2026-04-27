@@ -48,5 +48,30 @@
     "extra": "",
     "timestamp": "2026-04-27T11:50:17.235778",
     "id": 2
+  },
+  {
+    "name": "0333",
+    "dept": "Operations",
+    "o1": {
+      "rec": "cond",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "no",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "yes",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-27T15:06:35.391991",
+    "id": 3
   }
 ]
