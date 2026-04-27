@@ -206,6 +206,8 @@
     .sub-dept { font-size: 11px; color: #6b7280; margin-left: 6px; }
     .sub-time { font-size: 10px; color: #9ca3af; }
     .sub-verdicts { display: flex; gap: 4px; flex-wrap: wrap; }
+    .sub-delete-btn { font-size: 10px; padding: 2px 7px; border-radius: 4px; border: 1px solid #fca5a5; background: #fff1f2; color: #dc2626; cursor: pointer; white-space: nowrap; }
+    .sub-delete-btn:hover { background: #fee2e2; }
 
     /* ── AI synthesis section ── */
     .synthesis-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-top: 4px; }
@@ -1129,10 +1131,17 @@
       const time = new Date(s.timestamp + 'Z').toLocaleString();
       const div = document.createElement('div');
       div.className = 'sub-item';
+      div.id = `sub-item-${s.id}`;
+      const deleteBtn = adminPin
+        ? `<button class="sub-delete-btn" onclick="deleteSubmission(${s.id})" title="Delete this submission">✕ Delete</button>`
+        : '';
       div.innerHTML = `
         <div class="sub-item-header">
           <div><span class="sub-name">${esc(s.name)}</span><span class="sub-dept">${esc(s.dept || '—')}</span></div>
-          <span class="sub-time">${time}</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="sub-time">${time}</span>
+            ${deleteBtn}
+          </div>
         </div>
         <div class="sub-verdicts">
           <span style="font-size:10px;color:#6b7280;margin-right:4px;">Opt 1:</span>
@@ -1146,6 +1155,17 @@
       `;
       container.appendChild(div);
     });
+  }
+
+  async function deleteSubmission(id) {
+    if (!confirm('Delete this submission? This cannot be undone.')) return;
+    const res = await fetch(`/api/submissions/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-pin': adminPin }
+    });
+    if (!res.ok) { showToast('Error: could not delete submission.'); return; }
+    showToast('Submission deleted.');
+    loadDashboard();
   }
 
   function esc(str) {
