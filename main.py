@@ -1,5 +1,8 @@
 import json
 import os
+import base64
+import urllib.request
+import urllib.error
 import asyncio
 from datetime import datetime
 from typing import Optional
@@ -18,29 +21,66 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Use relative paths so the app works on any server
 BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE     = os.path.join(BASE_DIR, "submissions.json")
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 STATIC_DIR    = os.path.join(BASE_DIR, "static")
 
-# Admin PIN — read from environment variable if set, else fall back to default
+# Admin PIN
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "cdgengie2025")
 
-# OpenAI API key — read from environment variable
+# OpenAI API key
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
-# ── Data helpers ──────────────────────────────────────────────
+# ── GitHub persistent storage ─────────────────────────────────
+# Submissions are stored in the GitHub repo via the Contents API so they
+# survive Render restarts and redeployments.
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO  = "VVVZPP/fleet-onboarding"
+GITHUB_PATH  = "submissions.json"
+GITHUB_API   = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}"
+
+def _gh_headers():
+    return {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+        "User-Agent": "fleet-app",
+    }
 
 def load_data():
-    if not os.path.exists(DATA_FILE):
-        return []
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+    """Load submissions from GitHub repo."""
+    req = urllib.request.Request(GITHUB_API, headers=_gh_headers(), method="GET")
+    try:
+        with urllib.request.urlopen(req) as resp:
+            d = json.loads(resp.read())
+            content = base64.b64decode(d["content"]).decode("utf-8")
+            return json.loads(content), d["sha"]
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return [], None
+        raise
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+def save_data(data, sha=None):
+    """Save submissions back to GitHub repo."""
+    content_b64 = base64.b64encode(json.dumps(data, indent=2).encode("utf-8")).decode("utf-8")
+    payload = {
+        "message": "Update submissions",
+        "content": content_b64,
+    }
+    if sha:
+        payload["sha"] = sha
+    req = urllib.request.Request(
+        GITHUB_API,
+        data=json.dumps(payload).encode(),
+        headers=_gh_headers(),
+        method="PUT",
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"GitHub write failed: {e.code} {e.read().decode()[:200]}")
 
 def load_settings():
     defaults = {"dashboard_visible": False}
@@ -81,23 +121,37 @@ class SettingsUpdate(BaseModel):
 
 @app.post("/api/submit")
 def submit(sub: Submission):
-    data = load_data()
+    data, sha = load_data()
     entry = sub.dict()
     entry["timestamp"] = datetime.utcnow().isoformat()
-    entry["id"] = len(data) + 1
+    # Assign a unique ID based on max existing id + 1
+    max_id = max((e.get("id", 0) for e in data), default=0)
+    entry["id"] = max_id + 1
     data.append(entry)
-    save_data(data)
+    save_data(data, sha)
     return {"ok": True, "id": entry["id"], "total": len(data)}
 
 @app.get("/api/submissions")
 def get_submissions():
-    return load_data()
+    data, _ = load_data()
+    return data
 
 @app.delete("/api/submissions")
 def clear_submissions(x_admin_pin: Optional[str] = Header(default=None)):
     require_admin(x_admin_pin)
-    save_data([])
+    _, sha = load_data()
+    save_data([], sha)
     return {"ok": True}
+
+@app.delete("/api/submissions/{submission_id}")
+def delete_submission(submission_id: int, x_admin_pin: Optional[str] = Header(default=None)):
+    require_admin(x_admin_pin)
+    data, sha = load_data()
+    new_data = [s for s in data if s.get("id") != submission_id]
+    if len(new_data) == len(data):
+        raise HTTPException(status_code=404, detail="Submission not found.")
+    save_data(new_data, sha)
+    return {"ok": True, "remaining": len(new_data)}
 
 # ── Settings ──────────────────────────────────────────────────
 
@@ -148,7 +202,6 @@ def _majority(votes: list):
         return None
     counts = {v: votes.count(v) for v in set(votes)}
     top = max(counts, key=lambda k: counts[k])
-    # If there's a tie, prefer yes > cond > no
     max_count = counts[top]
     tied = [k for k, v in counts.items() if v == max_count]
     for pref in ["yes", "cond", "no"]:
@@ -181,7 +234,7 @@ def _sentiment_label(yes_pct, cond_pct, no_pct):
 @app.get("/api/synthesise")
 def synthesise():
     """Generate a structured rule-based synthesis from all submissions."""
-    data = load_data()
+    data, _ = load_data()
     if not data:
         raise HTTPException(status_code=400, detail="No submissions yet.")
 
@@ -290,8 +343,6 @@ def synthesise():
     # Section 4: Key Risks & Open Questions
     lines.append("### 4. Key Risks & Open Questions")
     all_extras = [s.get("extra", "").strip() for s in data if s.get("extra", "").strip()]
-    o3_cons = option_stats["o3"]["cons"]
-    o2_cons = option_stats["o2"]["cons"]
     risks = []
     if option_stats["o3"]["no"] > 0:
         risks.append("Option 3 (Fleet Cards) faces charger incompatibility issues — past manual resolutions were required.")
@@ -315,7 +366,6 @@ def synthesise():
     lines.append("### 5. Suggested Next Steps")
     majority_o1 = option_stats["o1"]["majority"]
     majority_o2 = option_stats["o2"]["majority"]
-    majority_o3 = option_stats["o3"]["majority"]
 
     if majority_o1 == "yes":
         lines.append("- **Proceed with Option 1** as the primary onboarding method — address duplicate account risk with a deduplication check at registration.")
