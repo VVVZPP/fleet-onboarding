@@ -23,5 +23,30 @@
     "extra": "",
     "timestamp": "2026-04-27T11:46:22.699173",
     "id": 1
+  },
+  {
+    "name": "Test02",
+    "dept": "Finance",
+    "o1": {
+      "rec": "cond",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "cond",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "no",
+      "pros": "",
+      "cons": "",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-27T11:47:51.798359",
+    "id": 2
   }
 ]
