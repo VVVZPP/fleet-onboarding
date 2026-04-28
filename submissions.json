@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "name": "Fatimah Naazimah",
+    "dept": "Sales",
+    "o1": {
+      "rec": "yes",
+      "pros": "Helps to track and align with partner on their count of users with cdg engie",
+      "cons": "Might need to regularly enter form to check on new registrations",
+      "mitigations": "To have either email notification or some form of automated pop up to notify sales support to onboard users"
+    },
+    "o2": {
+      "rec": "yes",
+      "pros": "Mass uploading user details takes lesser time than individually whitelisting users one by one at different times",
+      "cons": "Dummy accounts may be used across different users as it is tagged to car plates. Might not be able to fully understand the charging pattern/behaviors of individual users",
+      "mitigations": "NIL"
+    },
+    "o3": {
+      "rec": "no",
+      "pros": "Manage their own charging",
+      "cons": "Unable to tap onto certain chargers",
+      "mitigations": "To possibly find ways to eliminate RFID cards in the near future and direct all partners and users to use the app"
+    },
+    "extra": "NIL",
+    "timestamp": "2026-04-28T03:09:45.189615",
+    "id": 1
+  }
+]
