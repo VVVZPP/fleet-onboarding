@@ -23,5 +23,30 @@
     "extra": "NIL",
     "timestamp": "2026-04-28T03:09:45.189615",
     "id": 1
+  },
+  {
+    "name": "Edwin Chee",
+    "dept": "Operations",
+    "o1": {
+      "rec": "cond",
+      "pros": "Can match troubled charging sessions with users with date time tstamp",
+      "cons": "Troublesome for admin to constantly add and remove whitelist",
+      "mitigations": "NA"
+    },
+    "o2": {
+      "rec": "cond",
+      "pros": "No need to constantly update the whitelisted staff",
+      "cons": "users encountering troubled charging sessions need to note down timestamp and charger id",
+      "mitigations": "NA"
+    },
+    "o3": {
+      "rec": "cond",
+      "pros": "as per option 2",
+      "cons": "as per option 2",
+      "mitigations": "NA"
+    },
+    "extra": "NA",
+    "timestamp": "2026-04-28T03:15:53.638632",
+    "id": 2
   }
 ]
