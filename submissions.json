@@ -173,5 +173,30 @@
     "extra": "",
     "timestamp": "2026-04-28T03:27:25.493857",
     "id": 7
+  },
+  {
+    "name": "Venus Ho",
+    "dept": "Sales",
+    "o1": {
+      "rec": "yes",
+      "pros": "[CDG ENGIE] Builds a real customer database; enables marketing, personalised communications & accurate reporting.\n[Partners] Fewer charging issue escalations \u2014 CDG ENGIE can resolve directly with drivers.",
+      "cons": "[Partners/Corporate customers] Slower registration process; driver data must be collected individually.",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "no",
+      "pros": "",
+      "cons": "[Partners/Corporate Customers] Must manually intervene for every credential issue, increasing support burden.\n[Drivers] Cannot self-resolve login issues via OTP; must escalate to Partner \u2192 CDG ENGIE, resulting in longer resolution times.",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "cond",
+      "pros": "[Drivers] Familiar UX for drivers already accustomed to fuel cards.",
+      "cons": "\ufe0f Card-based charging is incompatible with some chargers on the network \u2014 past issues required manual resolution.",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-28T03:27:56.610817",
+    "id": 8
   }
 ]
