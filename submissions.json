@@ -98,5 +98,30 @@
     "extra": "",
     "timestamp": "2026-04-28T03:24:28.576465",
     "id": 4
+  },
+  {
+    "name": "Raymond",
+    "dept": "Solutioning",
+    "o1": {
+      "rec": "cond",
+      "pros": "able to track the data and process refund and follow up with the customer",
+      "cons": "personal data access and danger of it.\nregister for other people\nsharing accounts might have issues\nuser with personal and commercial accounts",
+      "mitigations": "control based on roles and access"
+    },
+    "o2": {
+      "rec": "cond",
+      "pros": "There are some fleets that have drivers who do not have phone. \ncan automate process",
+      "cons": "there might be a chance that the dummy might overlap",
+      "mitigations": "check if any overlap"
+    },
+    "o3": {
+      "rec": "no",
+      "pros": "",
+      "cons": "drivers with no phones issue",
+      "mitigations": "issue phone"
+    },
+    "extra": "Please keep customization to a set templates and maybe standardize the different variations to avoid complications and mistakes",
+    "timestamp": "2026-04-28T03:27:04.887301",
+    "id": 5
   }
 ]
