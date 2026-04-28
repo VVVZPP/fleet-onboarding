@@ -48,5 +48,30 @@
     "extra": "NA",
     "timestamp": "2026-04-28T03:15:53.638632",
     "id": 2
+  },
+  {
+    "name": "Priscilla Ng",
+    "dept": "Marketing",
+    "o1": {
+      "rec": "yes",
+      "pros": "best approach. customer can change their information via their app.",
+      "cons": "",
+      "mitigations": ""
+    },
+    "o2": {
+      "rec": "no",
+      "pros": "",
+      "cons": "change of information will be challenging.",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "cond",
+      "pros": "if the driver is not savvy.",
+      "cons": "unable to know the charger status.",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-28T03:23:29.905517",
+    "id": 3
   }
 ]
