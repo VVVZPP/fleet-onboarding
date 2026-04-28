@@ -123,5 +123,30 @@
     "extra": "Please keep customization to a set templates and maybe standardize the different variations to avoid complications and mistakes",
     "timestamp": "2026-04-28T03:27:04.887301",
     "id": 5
+  },
+  {
+    "name": "Vegetarian",
+    "dept": "Marketing",
+    "o1": {
+      "rec": "yes",
+      "pros": "True details for marketing communications",
+      "cons": "Mafan. Double steps",
+      "mitigations": "temporary passcode?"
+    },
+    "o2": {
+      "rec": "no",
+      "pros": "Faster progress",
+      "cons": "Unable to reach the user especially for marketing",
+      "mitigations": ""
+    },
+    "o3": {
+      "rec": "cond",
+      "pros": "Good for 'shared' EV such as EV truck",
+      "cons": "lost card...",
+      "mitigations": ""
+    },
+    "extra": "",
+    "timestamp": "2026-04-28T03:27:12.292794",
+    "id": 6
   }
 ]
